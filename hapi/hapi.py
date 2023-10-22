@@ -36,9 +36,9 @@ from bisect import bisect
 from warnings import warn, simplefilter
 from time import time
 import pydoc
-from .tips import *
-from .dtype import *
-from .constants import *
+from .tips import PYTIPS
+from .dtype import ComplexType, IntegerType, FloatType
+from .constants import cZero, cBolts, cc, hh, cSqrtLn2divSqrtPi, cLn2, cSqrtLn2, cSqrt2Ln2
 
 # Enable warning repetitions
 simplefilter('always', UserWarning)

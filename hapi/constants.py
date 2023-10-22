@@ -1,4 +1,4 @@
-from .dtype import *
+from .dtype import FloatType
 
 # define zero
 cZero = FloatType(0.)
