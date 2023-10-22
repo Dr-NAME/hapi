@@ -4718,10 +4718,10 @@ def fetch(TableName, M, I, numin, numax, ParameterGroups=[], Parameters=[]):
 
 # ------------------ complex probability function -----------------------
 # define static data
-zone = __ComplexType__(1.0e0 + 0.0e0j)
-zi = __ComplexType__(0.0e0 + 1.0e0j)
-tt = __FloatType__([0.5e0, 1.5e0, 2.5e0, 3.5e0, 4.5e0, 5.5e0, 6.5e0, 7.5e0, 8.5e0, 9.5e0, 10.5e0, 11.5e0, 12.5e0, 13.5e0, 14.5e0])
-pipwoeronehalf = __FloatType__(0.564189583547756e0)
+zone = ComplexType(1.0e0 + 0.0e0j)
+zi = ComplexType(0.0e0 + 1.0e0j)
+tt = FloatType([0.5e0, 1.5e0, 2.5e0, 3.5e0, 4.5e0, 5.5e0, 6.5e0, 7.5e0, 8.5e0, 9.5e0, 10.5e0, 11.5e0, 12.5e0, 13.5e0, 14.5e0])
+pipwoeronehalf = FloatType(0.564189583547756e0)
 
 # "naive" implementation for benchmarks
 def cpf3(X, Y):
@@ -4738,7 +4738,7 @@ def cpf3(X, Y):
         else:
             Y = array(Y)
 
-    zm1 = zone/__ComplexType__(X + zi*Y) # maybe redundant
+    zm1 = zone/ComplexType(X + zi*Y) # maybe redundant
     zm2 = zm1**2
     zsum = zone
     zterm=zone
@@ -4751,9 +4751,9 @@ def cpf3(X, Y):
     
     return zsum.real, zsum.imag
 
-T = __FloatType__([0.314240376e0, 0.947788391e0, 1.59768264e0, 2.27950708e0, 3.02063703e0, 3.8897249e0])
-U = __FloatType__([1.01172805e0, -0.75197147e0, 1.2557727e-2, 1.00220082e-2, -2.42068135e-4, 5.00848061e-7])
-S = __FloatType__([1.393237e0, 0.231152406e0, -0.155351466e0, 6.21836624e-3, 9.19082986e-5, -6.27525958e-7])
+T = FloatType([0.314240376e0, 0.947788391e0, 1.59768264e0, 2.27950708e0, 3.02063703e0, 3.8897249e0])
+U = FloatType([1.01172805e0, -0.75197147e0, 1.2557727e-2, 1.00220082e-2, -2.42068135e-4, 5.00848061e-7])
+S = FloatType([1.393237e0, 0.231152406e0, -0.155351466e0, 6.21836624e-3, 9.19082986e-5, -6.27525958e-7])
 
 # Complex probability function implementation (Humlicek)
 def cpf(X, Y):
@@ -4771,10 +4771,10 @@ def cpf(X, Y):
             Y = array(Y)
     
     # REGION3
-    index_REGION3 = where(sqrt(X**2 + Y**2) > __FloatType__(8.0e0))
+    index_REGION3 = where(sqrt(X**2 + Y**2) > FloatType(8.0e0))
     X_REGION3 = X[index_REGION3]
     Y_REGION3 = Y[index_REGION3]
-    zm1 = zone/__ComplexType__(X_REGION3 + zi*Y_REGION3)
+    zm1 = zone/ComplexType(X_REGION3 + zi*Y_REGION3)
     zm2 = zm1**2
     zsum_REGION3 = zone
     zterm=zone
@@ -4787,11 +4787,11 @@ def cpf(X, Y):
     X_REGION12 = X[index_REGION12]
     Y_REGION12 = Y[index_REGION12]
     
-    WR = __FloatType__(0.0e0)
-    WI = __FloatType__(0.0e0)
+    WR = FloatType(0.0e0)
+    WI = FloatType(0.0e0)
     
     # REGION12
-    Y1_REGION12 = Y_REGION12 + __FloatType__(1.5e0)
+    Y1_REGION12 = Y_REGION12 + FloatType(1.5e0)
     Y2_REGION12 = Y1_REGION12**2
 
     # REGION2    
@@ -4804,27 +4804,27 @@ def cpf(X, Y):
     Y_REGION2 = Y[index_REGION2]
     Y1_REGION2 = Y1_REGION12[subindex_REGION2]
     Y2_REGION2 = Y2_REGION12[subindex_REGION2]
-    Y3_REGION2 = Y_REGION2 + __FloatType__(3.0e0)
+    Y3_REGION2 = Y_REGION2 + FloatType(3.0e0)
     
     WR_REGION2 = WR
     WI_REGION2 = WI
 
     WR_REGION2 = zeros(len(X_REGION2))
-    ii = abs(X_REGION2) < __FloatType__(12.0e0)
+    ii = abs(X_REGION2) < FloatType(12.0e0)
     WR_REGION2[ii] = exp(-X_REGION2[ii]**2)
     WR_REGION2[~ii] = WR
     
     for I in range(6):
         R_REGION2 = X_REGION2 - T[I]
         R2_REGION2 = R_REGION2**2
-        D_REGION2 = __FloatType__(1.0e0) / (R2_REGION2 + Y2_REGION2)
+        D_REGION2 = FloatType(1.0e0) / (R2_REGION2 + Y2_REGION2)
         D1_REGION2 = Y1_REGION2 * D_REGION2
         D2_REGION2 = R_REGION2 * D_REGION2
         WR_REGION2 = WR_REGION2 + Y_REGION2 * (U[I]*(R_REGION2*D2_REGION2 - 1.5e0*D1_REGION2) + 
                                                S[I]*Y3_REGION2*D2_REGION2)/(R2_REGION2 + 2.25e0)
         R_REGION2 = X_REGION2 + T[I]
         R2_REGION2 = R_REGION2**2                
-        D_REGION2 = __FloatType__(1.0e0) / (R2_REGION2 + Y2_REGION2)
+        D_REGION2 = FloatType(1.0e0) / (R2_REGION2 + Y2_REGION2)
         D3_REGION2 = Y1_REGION2 * D_REGION2
         D4_REGION2 = R_REGION2 * D_REGION2
         WR_REGION2 = WR_REGION2 + Y_REGION2 * (U[I]*(R_REGION2*D4_REGION2 - 1.5e0*D3_REGION2) - 
@@ -4845,11 +4845,11 @@ def cpf(X, Y):
     
     for I in range(6):
         R_REGION1 = X_REGION1 - T[I]
-        D_REGION1 = __FloatType__(1.0e0) / (R_REGION1**2 + Y2_REGION1)
+        D_REGION1 = FloatType(1.0e0) / (R_REGION1**2 + Y2_REGION1)
         D1_REGION1 = Y1_REGION1 * D_REGION1
         D2_REGION1 = R_REGION1 * D_REGION1
         R_REGION1 = X_REGION1 + T[I]
-        D_REGION1 = __FloatType__(1.0e0) / (R_REGION1**2 + Y2_REGION1)
+        D_REGION1 = FloatType(1.0e0) / (R_REGION1**2 + Y2_REGION1)
         D3_REGION1 = Y1_REGION1 * D_REGION1
         D4_REGION1 = R_REGION1 * D_REGION1
         
@@ -4977,17 +4977,17 @@ def pcqsdhc(sg0, GamD, Gam0, Gam2, Shift0, Shift2, anuVC, eta, sg, Ylm=0.0):
         sg = array([sg])
     
     number_of_points = len(sg)
-    Aterm_GLOBAL = zeros(number_of_points, dtype=__ComplexType__)
-    Bterm_GLOBAL = zeros(number_of_points, dtype=__ComplexType__)
+    Aterm_GLOBAL = zeros(number_of_points, dtype=ComplexType)
+    Bterm_GLOBAL = zeros(number_of_points, dtype=ComplexType)
 
     cte=sqrt(log(2.0e0))/GamD
     rpi=sqrt(pi)
-    iz = __ComplexType__(0.0e0 + 1.0e0j)
+    iz = ComplexType(0.0e0 + 1.0e0j)
 
-    c0 = __ComplexType__(Gam0 + 1.0e0j*Shift0)
-    c2 = __ComplexType__(Gam2 + 1.0e0j*Shift2)
-    c0t = __ComplexType__((1.0e0 - eta) * (c0 - 1.5e0 * c2) + anuVC)
-    c2t = __ComplexType__((1.0e0 - eta) * c2)
+    c0 = ComplexType(Gam0 + 1.0e0j*Shift0)
+    c2 = ComplexType(Gam2 + 1.0e0j*Shift2)
+    c0t = ComplexType((1.0e0 - eta) * (c0 - 1.5e0 * c2) + anuVC)
+    c2t = ComplexType((1.0e0 - eta) * c2)
 
     # PART1
     if abs(c2t) == 0.0e0:
@@ -4995,19 +4995,19 @@ def pcqsdhc(sg0, GamD, Gam0, Gam2, Shift0, Shift2, anuVC, eta, sg, Ylm=0.0):
         xZ1 = -Z1.imag
         yZ1 = Z1.real
         WR1, WI1 = VARIABLES['CPF'](xZ1, yZ1)
-        Aterm_GLOBAL = rpi*cte*__ComplexType__(WR1 + 1.0e0j*WI1)
+        Aterm_GLOBAL = rpi*cte*ComplexType(WR1 + 1.0e0j*WI1)
         index_Z1 = abs(Z1) <= 4.0e3
         index_NOT_Z1 = ~index_Z1
         if any(index_Z1):
-            Bterm_GLOBAL = rpi*cte*((1.0e0 - Z1**2)*__ComplexType__(WR1 + 1.0e0j*WI1) + Z1/rpi)
+            Bterm_GLOBAL = rpi*cte*((1.0e0 - Z1**2)*ComplexType(WR1 + 1.0e0j*WI1) + Z1/rpi)
         if any(index_NOT_Z1):
-            Bterm_GLOBAL = cte*(rpi*__ComplexType__(WR1 + 1.0e0j*WI1) + 0.5e0/Z1 - 0.75e0/(Z1**3))
+            Bterm_GLOBAL = cte*(rpi*ComplexType(WR1 + 1.0e0j*WI1) + 0.5e0/Z1 - 0.75e0/(Z1**3))
     else:
         # PART2, PART3 AND PART4   (PART4 IS A MAIN PART)
 
         # X - vector, Y - scalar
         X = (iz * (sg0 - sg) + c0t) / c2t
-        Y = __ComplexType__(1.0e0 / ((2.0e0*cte*c2t))**2)
+        Y = ComplexType(1.0e0 / ((2.0e0*cte*c2t))**2)
         csqrtY = (Gam2 - iz*Shift2) / (2.0e0*cte*(1.0e0-eta) * (Gam2**2 + Shift2**2))
 
         index_PART2 = abs(X) <= 3.0e-8 * abs(Y)
@@ -5018,7 +5018,7 @@ def pcqsdhc(sg0, GamD, Gam0, Gam2, Shift0, Shift2, anuVC, eta, sg, Ylm=0.0):
         if any(index_PART4):
             X_TMP = X[index_PART4]
             Z1 = sqrt(X_TMP + Y) - csqrtY
-            Z2 = Z1 + __FloatType__(2.0e0) * csqrtY
+            Z2 = Z1 + FloatType(2.0e0) * csqrtY
             xZ1 = -Z1.imag
             yZ1 =  Z1.real
             xZ2 = -Z2.imag
@@ -5050,10 +5050,10 @@ def pcqsdhc(sg0, GamD, Gam0, Gam2, Shift0, Shift2, anuVC, eta, sg, Ylm=0.0):
                 WR2_PART4[index_CPF] = WR2
                 WI2_PART4[index_CPF] = WI2
             
-            Aterm = rpi*cte*(__ComplexType__(WR1_PART4 + 1.0e0j*WI1_PART4) - __ComplexType__(WR2_PART4+1.0e0j*WI2_PART4))
+            Aterm = rpi*cte*(ComplexType(WR1_PART4 + 1.0e0j*WI1_PART4) - ComplexType(WR2_PART4+1.0e0j*WI2_PART4))
             Bterm = (-1.0e0 +
-                      rpi/(2.0e0*csqrtY)*(1.0e0 - Z1**2)*__ComplexType__(WR1_PART4 + 1.0e0j*WI1_PART4)-
-                      rpi/(2.0e0*csqrtY)*(1.0e0 - Z2**2)*__ComplexType__(WR2_PART4 + 1.0e0j*WI2_PART4)) / c2t
+                      rpi/(2.0e0*csqrtY)*(1.0e0 - Z1**2)*ComplexType(WR1_PART4 + 1.0e0j*WI1_PART4)-
+                      rpi/(2.0e0*csqrtY)*(1.0e0 - Z2**2)*ComplexType(WR2_PART4 + 1.0e0j*WI2_PART4)) / c2t
             Aterm_GLOBAL[index_PART4] = Aterm
             Bterm_GLOBAL[index_PART4] = Bterm
 
@@ -5068,10 +5068,10 @@ def pcqsdhc(sg0, GamD, Gam0, Gam2, Shift0, Shift2, anuVC, eta, sg, Ylm=0.0):
             yZ2 = Z2.real
             WR1_PART2, WI1_PART2 = VARIABLES['CPF'](xZ1, yZ1)
             WR2_PART2, WI2_PART2 = VARIABLES['CPF'](xZ2, yZ2)
-            Aterm = rpi*cte*(__ComplexType__(WR1_PART2 + 1.0e0j*WI1_PART2) - __ComplexType__(WR2_PART2 + 1.0e0j*WI2_PART2))
+            Aterm = rpi*cte*(ComplexType(WR1_PART2 + 1.0e0j*WI1_PART2) - ComplexType(WR2_PART2 + 1.0e0j*WI2_PART2))
             Bterm = (-1.0e0 +
-                      rpi/(2.0e0*csqrtY)*(1.0e0 - Z1**2)*__ComplexType__(WR1_PART2 + 1.0e0j*WI1_PART2)-
-                      rpi/(2.0e0*csqrtY)*(1.0e0 - Z2**2)*__ComplexType__(WR2_PART2 + 1.0e0j*WI2_PART2)) / c2t
+                      rpi/(2.0e0*csqrtY)*(1.0e0 - Z1**2)*ComplexType(WR1_PART2 + 1.0e0j*WI1_PART2)-
+                      rpi/(2.0e0*csqrtY)*(1.0e0 - Z2**2)*ComplexType(WR2_PART2 + 1.0e0j*WI2_PART2)) / c2t
             Aterm_GLOBAL[index_PART2] = Aterm
             Bterm_GLOBAL[index_PART2] = Bterm
             
@@ -5083,21 +5083,21 @@ def pcqsdhc(sg0, GamD, Gam0, Gam2, Shift0, Shift2, anuVC, eta, sg, Ylm=0.0):
             WR1_PART3, WI1_PART3 =  VARIABLES['CPF'](xZ1, yZ1)
             index_ABS = abs(sqrt(X_TMP)) <= 4.0e3
             index_NOT_ABS = ~index_ABS
-            Aterm = zeros(len(index_PART3), dtype=__ComplexType__)
-            Bterm = zeros(len(index_PART3), dtype=__ComplexType__)
+            Aterm = zeros(len(index_PART3), dtype=ComplexType)
+            Bterm = zeros(len(index_PART3), dtype=ComplexType)
             if any(index_ABS):
                 xXb = -sqrt(X).imag
                 yXb = sqrt(X).real
                 WRb, WIb = VARIABLES['CPF'](xXb, yXb)
-                Aterm[index_ABS] = (2.0e0*rpi/c2t)*(1.0e0/rpi - sqrt(X_TMP[index_ABS])*__ComplexType__(WRb + 1.0e0j*WIb))
+                Aterm[index_ABS] = (2.0e0*rpi/c2t)*(1.0e0/rpi - sqrt(X_TMP[index_ABS])*ComplexType(WRb + 1.0e0j*WIb))
                 Bterm[index_ABS] = (1.0e0/c2t)*(-1.0e0+
-                                  2.0e0*rpi*(1.0e0 - X_TMP[index_ABS]-2.0e0*Y)*(1.0e0/rpi-sqrt(X_TMP[index_ABS])*__ComplexType__(WRb + 1.0e0j*WIb))+
-                                  2.0e0*rpi*sqrt(X_TMP[index_ABS] + Y)*__ComplexType__(WR1_PART3 + 1.0e0j*WI1_PART3))
+                                  2.0e0*rpi*(1.0e0 - X_TMP[index_ABS]-2.0e0*Y)*(1.0e0/rpi-sqrt(X_TMP[index_ABS])*ComplexType(WRb + 1.0e0j*WIb))+
+                                  2.0e0*rpi*sqrt(X_TMP[index_ABS] + Y)*ComplexType(WR1_PART3 + 1.0e0j*WI1_PART3))
             if any(index_NOT_ABS):
                 Aterm[index_NOT_ABS] = (1.0e0/c2t)*(1.0e0/X_TMP[index_NOT_ABS] - 1.5e0/(X_TMP[index_NOT_ABS]**2))
                 Bterm[index_NOT_ABS] = (1.0e0/c2t)*(-1.0e0 + (1.0e0 - X_TMP[index_NOT_ABS] - 2.0e0*Y)*
                                         (1.0e0/X_TMP[index_NOT_ABS] - 1.5e0/(X_TMP[index_NOT_ABS]**2))+
-                                         2.0e0*rpi*sqrt(X_TMP[index_NOT_ABS] + Y)*__ComplexType__(WR1 + 1.0e0j*WI1))
+                                         2.0e0*rpi*sqrt(X_TMP[index_NOT_ABS] + Y)*ComplexType(WR1 + 1.0e0j*WI1))
             Aterm_GLOBAL[index_PART3] = Aterm
             Bterm_GLOBAL[index_PART3] = Bterm
             
@@ -6359,7 +6359,7 @@ PRESSURE_INDUCED_ENVDEP = {
 # temperature dependence for intensities (HITRAN)
 def EnvironmentDependency_Intensity(LineIntensityRef, T, Tref, SigmaT, SigmaTref, 
                                     LowerStateEnergy, LineCenter):
-    const = __FloatType__(1.4388028496642257)
+    const = FloatType(1.4388028496642257)
     ch = exp(-const*LowerStateEnergy/T)*(1-exp(-const*LineCenter/T))
     zn = exp(-const*LowerStateEnergy/Tref)*(1-exp(-const*LineCenter/Tref))
     LineIntensity = LineIntensityRef*SigmaTref/SigmaT*ch/zn
@@ -6575,8 +6575,8 @@ def absorptionCoefficient_Generic(Components=None, SourceTables=None, partitionF
     Xsect = zeros(number_of_points)
        
     # reference temperature and pressure
-    T_ref_default = __FloatType__(296.) # K
-    p_ref_default = __FloatType__(1.) # atm
+    T_ref_default = FloatType(296.) # K
+    p_ref_default = FloatType(1.) # atm
     
     # actual temperature and pressure
     T = Environment['T'] # K
@@ -6600,7 +6600,7 @@ def absorptionCoefficient_Generic(Components=None, SourceTables=None, partitionF
         
     # pre-calculation of volume concentration
     if HITRAN_units:
-        factor = __FloatType__(1.0)
+        factor = FloatType(1.0)
     else:
         factor = volumeConcentration(p, T)
         

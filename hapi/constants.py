@@ -1,7 +1,7 @@
 from .dtype import *
 
 # define zero
-cZero = __FloatType__(0.)
+cZero = FloatType(0.)
 
 # physical constants
 cBolts = 1.380648813E-16 # erg/K, CGS
