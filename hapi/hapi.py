@@ -38,6 +38,7 @@ from warnings import warn,simplefilter
 from time import time
 import pydoc
 from .tips import *
+from .dtype import *
 # Enable warning repetitions
 simplefilter('always', UserWarning)
 
@@ -54,10 +55,6 @@ if 'io' in sys.modules: # define open using Linux-style line endings
 else:
     open_ = open
 
-# define precision
-__ComplexType__ = complex128
-__IntegerType__ = int64
-__FloatType__ = float64
 
 # define zero
 cZero = __FloatType__(0.)
