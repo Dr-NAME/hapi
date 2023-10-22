@@ -23,18 +23,17 @@ import os, os.path
 import re
 from os import listdir
 import numpy as np
-from numpy import zeros,array,setdiff1d,ndarray,arange
-from numpy import place,where,real,polyval
-from numpy import complex128,int64,float64,float32
-from numpy import sqrt,abs,exp,pi,log,sin,cos,tan
+from numpy import zeros, array, setdiff1d, ndarray, arange
+from numpy import place, where, real, polyval
+from numpy import sqrt, abs, exp, pi, log, sin, cos, tan
 from numpy import convolve
 from numpy import flipud
-from numpy.fft import fft,fftshift
-from numpy import linspace,floor
-from numpy import any,minimum,maximum
+from numpy.fft import fft, fftshift
+from numpy import linspace, floor
+from numpy import any, minimum, maximum
 from numpy import sort as npsort
 from bisect import bisect
-from warnings import warn,simplefilter
+from warnings import warn, simplefilter
 from time import time
 import pydoc
 from .tips import *
@@ -49,11 +48,12 @@ try:
     import urllib.request as urllib2
 except ImportError:
     import urllib2
+
 if 'io' in sys.modules: # define open using Linux-style line endings
     import io
-    def open_(*args,**argv):
+    def open_(*args, **argv):
         argv.update(dict(newline='\n'))
-        return io.open(*args,**argv)
+        return io.open(*args, **argv)
 else:
     open_ = open
 
@@ -90,14 +90,14 @@ VARIABLES['DISPLAY_FETCH_URL'] = False
 # In this "robust" version of arange the grid doesn't suffer 
 # from the shift of the nodes due to error accumulation.
 # This effect is pronounced only if the step is sufficiently small.
-def arange_(lower,upper,step):
+def arange_(lower, upper, step):
     npnt = floor((upper-lower)/step)+1
     npnt = int(npnt) # cast to integer to avoid type errors
     upper_new = lower + step*(npnt-1)
     if abs((upper-upper_new)-step) < 1e-10:
         upper_new += step
         npnt += 1    
-    return linspace(lower,upper_new,npnt)
+    return linspace(lower, upper_new, npnt)
 
 # ---------------------------------------------------------------
 # ---------------------------------------------------------------
@@ -118,7 +118,7 @@ VARIABLES['BACKEND_DATABASE_NAME'] = BACKEND_DATABASE_NAME_DEFAULT
 LOCAL_TABLE_CACHE = {
    'sampletab' : { # table
       'header' : { # header
-         'order' : ('column1','column2','column3'),
+         'order' : ('column1', 'column2', 'column3'),
          'format' : {
             'column1' : '%10d',
             'column2' : '%20f',
@@ -135,9 +135,9 @@ LOCAL_TABLE_CACHE = {
          'table_type' : 'strict'
       }, # /header
       'data' : {
-         'column1' : [1,2,3],
-         'column2' : [10.5,11.5,12.5],
-         'column3' : ['one','two','three']
+         'column1' : [1, 2, 3],
+         'column2' : [10.5, 11.5, 12.5],
+         'column3' : ['one', 'two', 'three']
       }, # /data
    } # /table
 } # hash-map of tables
@@ -301,22 +301,6 @@ HITRAN_DEFAULT_HEADER = {
     "gpp": "int16",  
   }
 }
-
-#class CaselessDict(dict):                   
-#    def __getitem__(self,key):
-#        return super(CaselessDict,self).__getitem__(key.lower())
-#    def __setitem__(self,key,val):
-#        super(CaselessDict,self).__setitem__(key.lower(),val)
-#    def __contains__(self,key):
-#        return super(CaselessDict,self).__contains__(key.lower())
-#    def has_key(self,key):
-#        return super(CaselessDict,self).has_key(key.lower())
-#    def get(self,key,default=None):
-#        return super(CaselessDict,self).get(key.lower(),default)
-#    def __init__(self,dct=None):
-#        if dct is not None:
-#            for key in dct:
-#                super(CaselessDict,self).__setitem__(key.lower(),dct[key])
 
 class CaseInsensitiveDict(dict):
     """
@@ -713,87 +697,81 @@ PARAMETER_META = CaselessDict(
   },
 })
 
-def getFullTableAndHeaderName(TableName,ext=None):
-    #print('TableName=',TableName)
-    if ext is None: ext = 'data'
-    flag_abspath = False # check if the supplied table name already contains absolute path
-    if os.path.isabs(TableName): flag_abspath = True        
+def getFullTableAndHeaderName(TableName, ext='data'):
+    flag_abspath = os.path.isabs(TableName) # check if the supplied table name already contains absolute path
     fullpath_data = TableName + '.' + ext
-    if not flag_abspath: fullpath_data = os.path.join(VARIABLES['BACKEND_DATABASE_NAME'],fullpath_data)
+    if not flag_abspath:
+        fullpath_data = os.path.join(VARIABLES['BACKEND_DATABASE_NAME'], fullpath_data)
     if not os.path.isfile(fullpath_data):
         fullpath_data = VARIABLES['BACKEND_DATABASE_NAME'] + '/' + TableName + '.par'
         if not os.path.isfile(fullpath_data) and TableName!='sampletab':
             raise Exception('Lonely header \"%s\"' % fullpath_data)
     fullpath_header = TableName + '.header'
-    if not flag_abspath: fullpath_header = os.path.join(VARIABLES['BACKEND_DATABASE_NAME'],fullpath_header)
-    return fullpath_data,fullpath_header
+    if not flag_abspath:
+        fullpath_header = os.path.join(VARIABLES['BACKEND_DATABASE_NAME'], fullpath_header)
+    return fullpath_data, fullpath_header
 
-def getParameterFormat(ParameterName,TableName):
+def getParameterFormat(ParameterName, TableName):
     return LOCAL_TABLE_CACHE[TableName]['header']['format']
 
 def getTableHeader(TableName):
     return LOCAL_TABLE_CACHE[TableName]['header']
 
-def getRowObject(RowID,TableName):
-    # return RowObject from TableObject in CACHE
+def getRowObject(RowID, TableName):
+    """return RowObject from TableObject in CACHE"""
     RowObject = []
     for par_name in LOCAL_TABLE_CACHE[TableName]['header']['order']:
         par_value = LOCAL_TABLE_CACHE[TableName]['data'][par_name][RowID]
         par_format = LOCAL_TABLE_CACHE[TableName]['header']['format'][par_name]
-        RowObject.append((par_name,par_value,par_format))
+        RowObject.append((par_name, par_value, par_format))
     return RowObject
 
 # INCREASE ROW COUNT
-def addRowObject(RowObject,TableName):
-    #print 'addRowObject: '
-    #print 'RowObject: '+str(RowObject)
-    #print 'TableName:'+TableName
-    for par_name,par_value,par_format in RowObject:
-        #print 'par_name,par_value,par_format: '+str((par_name,par_value,par_format))
-        #print '>>> '+ str(LOCAL_TABLE_CACHE[TableName]['data'][par_name])
-        #LOCAL_TABLE_CACHE[TableName]['data'][par_name] += [par_value]
+def addRowObject(RowObject, TableName):
+    for par_name, par_value, par_format in RowObject:
         LOCAL_TABLE_CACHE[TableName]['data'][par_name].append(par_value)
 
-def setRowObject(RowID,RowObject,TableName):
+def setRowObject(RowID, RowObject, TableName):
     number_of_rows = LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows']
     if RowID >= 0 and RowID < number_of_rows:
-       for par_name,par_value,par_format in RowObject:
+       for par_name, par_value, par_format in RowObject:
            LOCAL_TABLE_CACHE[TableName]['data'][par_name][RowID] = par_value
     else:
        # !!! XXX ATTENTION: THIS IS A TEMPORARY INSERTION XXX !!!
        LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows'] += 1
-       addRowObject(RowObject,TableName)
+       addRowObject(RowObject, TableName)
 
 def getDefaultRowObject(TableName):
-    # get a default RowObject from a table
+    """get a default RowObject from a table"""
     RowObject = []
     for par_name in LOCAL_TABLE_CACHE[TableName]['header']['order']:
         par_value = LOCAL_TABLE_CACHE[TableName]['header']['default'][par_name]
         par_format = LOCAL_TABLE_CACHE[TableName]['header']['format'][par_name]
-        RowObject.append((par_name,par_value,par_format))
+        RowObject.append((par_name, par_value, par_format))
     return RowObject
 
-def subsetOfRowObject(ParameterNames,RowObject):
-    # return a subset of RowObject according to 
-    #RowObjectNew = []
-    #for par_name,par_value,par_format in RowObject:
-    #     if par_name in ParameterNames:
-    #        RowObjectNew.append((par_name,par_value,par_format))
-    #return RowObjectNew
+def subsetOfRowObject(ParameterNames, RowObject):
+    """
+    return a subset of RowObject according to 
+    RowObjectNew = []
+    for par_name, par_value, par_format in RowObject:
+         if par_name in ParameterNames:
+            RowObjectNew.append((par_name, par_value, par_format))
+    return RowObjectNew
+    """
     dct = {}
-    for par_name,par_value,par_format in RowObject:
-        dct[par_name] = (par_name,par_value,par_format)
+    for par_name, par_value, par_format in RowObject:
+        dct[par_name] = (par_name, par_value, par_format)
     RowObjectNew = []
     for par_name in ParameterNames:
         RowObjectNew.append(dct[par_name])
     return RowObjectNew
 
-#FORMAT_PYTHON_REGEX = '^\%([0-9]*)\.?([0-9]*)([dfs])$'
 FORMAT_PYTHON_REGEX = '^\%(\d*)(\.(\d*))?([edfsEDFS])$'
 
 # Fortran string formatting
 #  based on a pythonic format string
-def formatString(par_format,par_value,lang='FORTRAN'):
+def formatString(par_format, par_value, lang='FORTRAN'):
     # Fortran format rules:
     #  %M.NP
     #        M - total field length (optional)
@@ -803,34 +781,34 @@ def formatString(par_format,par_value,lang='FORTRAN'):
     #        P - [dfs] int/float/string
     # PYTHON RULE: if N is abcent, default value is 6
     regex = FORMAT_PYTHON_REGEX
-    (lng,trail,lngpnt,ty) = re.search(regex,par_format).groups()
+    (lng, trail, lngpnt, ty) = re.search(regex, par_format).groups()
     if type(par_value) is np.ma.core.MaskedConstant:
         result = '%%%ds' % lng % '#'
         return result
     result = par_format % par_value
-    if ty.lower() in set(['f','e']):
+    if ty.lower() in set(['f', 'e']):
        lng = int(lng) if lng else 0
        lngpnt = int(lngpnt) if lngpnt else 0
        result = par_format % par_value
        res = result.strip()
-       if lng==lngpnt+1:
-          if res[0:1]=='0':
-             result =  '%%%ds' % lng % res[1:]
-       if par_value<0:
-          if res[1:2]=='0':
+       if lng == lngpnt + 1:
+          if res[0:1] == '0':
+             result = '%%%ds' % lng % res[1:]
+       if par_value < 0:
+          if res[1:2] == '0':
              result = '%%%ds' % lng % (res[0:1]+res[2:])
     return result
 
 def putRowObjectToString(RowObject):
     # serialize RowObject to string
-    # TODO: support different languages (C,Fortran)
+    # TODO: support different languages (C, Fortran)
     output_string = ''
-    for par_name,par_value,par_format in RowObject:
+    for par_name, par_value, par_format in RowObject:
         # Python formatting
         #output_string += par_format % par_value
         # Fortran formatting
-        #print 'par_name,par_value,par_format: '+str((par_name,par_value,par_format))
-        output_string += formatString(par_format,par_value)
+        #print 'par_name, par_value, par_format: '+str((par_name, par_value, par_format))
+        output_string += formatString(par_format, par_value)
     return output_string
 
 # Parameter nicknames are hard-coded.
@@ -861,7 +839,7 @@ def putTableHeaderToString(TableName):
     regex = FORMAT_PYTHON_REGEX
     for par_name in LOCAL_TABLE_CACHE[TableName]['header']['order']:
         par_format = LOCAL_TABLE_CACHE[TableName]['header']['format'][par_name]
-        (lng,trail,lngpnt,ty) = re.search(regex,par_format).groups()
+        (lng, trail, lngpnt, ty) = re.search(regex, par_format).groups()
         fmt = '%%%ss' % lng
         try:
             par_name_short = PARAMETER_NICKNAMES[par_name]
@@ -871,63 +849,60 @@ def putTableHeaderToString(TableName):
         output_string += (fmt % par_name_short)[:int(lng)]
     return output_string
 
-def getRowObjectFromString(input_string,TableName):
+def getRowObjectFromString(input_string, TableName):
     # restore RowObject from string, get formats and names in TableName
     #print 'getRowObjectFromString:'
     pos = 0
     RowObject = []
     for par_name in LOCAL_TABLE_CACHE[TableName]['header']['order']:
         par_format = LOCAL_TABLE_CACHE[TableName]['header']['format'][par_name]
-        regex = '^\%([0-9]+)\.?[0-9]*([dfs])$' #
         regex = FORMAT_PYTHON_REGEX
-        (lng,trail,lngpnt,ty) = re.search(regex,par_format).groups()
+        (lng, trail, lngpnt, ty) = re.search(regex, par_format).groups()
         lng = int(lng)
         par_value = input_string[pos:(pos+lng)]
         if ty=='d': # integer value
            par_value = int(par_value)
-        elif ty.lower() in set(['e','f']): # float value
+        elif ty.lower() in set(['e', 'f']): # float value
            par_value = float(par_value)
         elif ty=='s': # string value
            pass # don't strip string value
         else:
            print('err1')
            raise Exception('Format \"%s\" is unknown' % par_format)
-        RowObject.append((par_name,par_value,par_format))
+        RowObject.append((par_name, par_value, par_format))
         pos += lng
     # Do the same but now for extra (comma-separated) parameters
     if 'extra' in set(LOCAL_TABLE_CACHE[TableName]['header']):
         csv_chunks = input_string.split(LOCAL_TABLE_CACHE[TableName]['header'].\
-                                        get('extra_separator',','))
+                                        get('extra_separator', ', '))
         # Disregard the first "column-fixed" container if it presents:
-        if LOCAL_TABLE_CACHE[TableName]['header'].get('order',[]):
+        if LOCAL_TABLE_CACHE[TableName]['header'].get('order', []):
             pos = 1
         else:
             pos = 0
         for par_name in LOCAL_TABLE_CACHE[TableName]['header']['extra']:
             par_format = LOCAL_TABLE_CACHE[TableName]['header']['extra_format'][par_name]
-            regex = '^\%([0-9]+)\.?[0-9]*([dfs])$' #
             regex = FORMAT_PYTHON_REGEX
-            (lng,trail,lngpnt,ty) = re.search(regex,par_format).groups()
+            (lng, trail, lngpnt, ty) = re.search(regex, par_format).groups()
             lng = int(lng) 
             par_value = csv_chunks[pos]
-            if ty=='d': # integer value
+            if ty == 'd': # integer value
                 try:
                     par_value = int(par_value)
                 except ValueError:
-                    #par_value = 0
                     par_value = np.nan
-            elif ty.lower() in set(['e','f']): # float value
+            elif ty.lower() in set(['e', 'f']): # float value
                 try:
                     par_value = float(par_value)
                 except ValueError:
                     #par_value = 0.0
                     par_value = np.nan
-            elif ty=='s': # string value
+            elif ty == 's': # string value
                 pass # don't strip string value
             else:
                 print('err')
                 raise Exception('Format \"%s\" is unknown' % par_format)
-            RowObject.append((par_name,par_value,par_format))
+            RowObject.append((par_name, par_value, par_format))
             pos += 1   
     return RowObject
 
@@ -938,42 +913,40 @@ def cache2storage(TableName):
        os.mkdir(VARIABLES['BACKEND_DATABASE_NAME'])
     except:
        pass
-    #fullpath_data,fullpath_header = getFullTableAndHeaderName(TableName) # "lonely header" bug
+
     fullpath_data = VARIABLES['BACKEND_DATABASE_NAME'] + '/' + TableName + '.data' # bugfix
     fullpath_header = VARIABLES['BACKEND_DATABASE_NAME'] + '/' + TableName + '.header' # bugfix
-    OutfileData = open(fullpath_data,'w')
-    OutfileHeader = open(fullpath_header,'w')
+    OutfileData = open(fullpath_data, 'w')
+    OutfileHeader = open(fullpath_header, 'w')
     # write table data
     line_count = 1
     line_number = LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows']
-    for RowID in range(0,line_number):
+    for RowID in range(0, line_number):
         line_count += 1
-        RowObject = getRowObject(RowID,TableName)
+        RowObject = getRowObject(RowID, TableName)
         raw_string = putRowObjectToString(RowObject)
         OutfileData.write(raw_string+'\n')
     # write table header
     TableHeader = getTableHeader(TableName)
-    OutfileHeader.write(json.dumps(TableHeader,indent=2))
+    OutfileHeader.write(json.dumps(TableHeader, indent=2))
     
-def storage2cache(TableName,cast=True,ext=None,nlines=None,pos=None):
+def storage2cache(TableName, cast=True, ext=None, nlines=None, pos=None):
     """ edited by NHL
     TableName: name of the HAPI table to read in
     ext: file extension
     nlines: number of line in the block; if None, read all line at once 
     pos: file position to seek
     """
-    #print 'storage2cache:'
-    #print('TableName',TableName)
     if nlines is not None:
         print('WARNING: storage2cache is reading the block of maximum %d lines'%nlines)
-    fullpath_data,fullpath_header = getFullTableAndHeaderName(TableName,ext)
+    fullpath_data, fullpath_header = getFullTableAndHeaderName(TableName, ext)
     if TableName in LOCAL_TABLE_CACHE and \
        'filehandler' in LOCAL_TABLE_CACHE[TableName] and \
        LOCAL_TABLE_CACHE[TableName]['filehandler'] is not None:
         InfileData = LOCAL_TABLE_CACHE[TableName]['filehandler']
     else:
-        InfileData = open_(fullpath_data,'r')            
-    InfileHeader = open(fullpath_header,'r')
+        InfileData = open_(fullpath_data, 'r')
+    InfileHeader = open(fullpath_header, 'r')
     #try:
     header_text = InfileHeader.read()
     try:
@@ -982,15 +955,14 @@ def storage2cache(TableName,cast=True,ext=None,nlines=None,pos=None):
         print('HEADER:')
         print(header_text)
         raise Exception('Invalid header')
-    #print 'Header:'+str(Header)
     LOCAL_TABLE_CACHE[TableName] = {}
     LOCAL_TABLE_CACHE[TableName]['header'] = Header
     LOCAL_TABLE_CACHE[TableName]['data'] = CaselessDict()
     LOCAL_TABLE_CACHE[TableName]['filehandler'] = InfileData
     # Check if Header['order'] and Header['extra'] contain
     #  parameters with same names, raise exception if true.
-    #intersct = set(Header['order']).intersection(set(Header.get('extra',[])))
-    intersct = set(Header.get('order',[])).intersection(set(Header.get('extra',[])))
+    #intersct = set(Header['order']).intersection(set(Header.get('extra', [])))
+    intersct = set(Header.get('order', [])).intersection(set(Header.get('extra', [])))
     if intersct:
         raise Exception('Parameters with the same names: {}'.format(intersct))
     # initialize empty data to avoid problems
@@ -1012,25 +984,19 @@ def storage2cache(TableName,cast=True,ext=None,nlines=None,pos=None):
     if 'extra' in header and header['extra']:
         line_count = 0
         flag_EOF = False
-        #line_number = LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows']
-        #for line in InfileData:
         while True:
-            #print '%d line from %d' % (line_count,line_number)
-            #print 'line: '+line #
-            if nlines is not None and line_count>=nlines: break
+            if nlines is not None and line_count >= nlines: break
             line = InfileData.readline()
-            if line=='': # end of file is represented by an empty string
+            if line == '': # end of file is represented by an empty string
                 flag_EOF = True
                 break 
             try:
-                RowObject = getRowObjectFromString(line,TableName)
+                RowObject = getRowObjectFromString(line, TableName)
                 line_count += 1
             except:
                 continue
-            #print 'RowObject: '+str(RowObject)
-            addRowObject(RowObject,TableName)
-        #except:
-        #    raise Exception('TABLE FETCHING ERROR')
+            addRowObject(RowObject, TableName)
+
         LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows'] = line_count
     else:
         quantities = header['order']
@@ -1051,55 +1017,51 @@ def storage2cache(TableName,cast=True,ext=None,nlines=None,pos=None):
             size = int(aux)
             end = start + size
             def cfunc(line, dtype=dtype, start=start, end=end, qnt=qnt):
-                # return dtype(line[start:end]) # this will fail on the float number with D exponent (Fortran notation)
                 if dtype==float:
                     try:
                         return dtype(line[start:end])
                     except ValueError: # possible D exponent instead of E 
                         try:
-                            return dtype(line[start:end].replace('D','E'))
+                            return dtype(line[start:end].replace('D', 'E'))
                         except ValueError: # this is a special case and it should not be in the main version tree!
                             # Dealing with the weird and unparsable intensity format such as "2.700-164, i.e with no E or D characters.
-                            res = re.search('(\d\.\d\d\d)\-(\d\d\d)',line[start:end])
+                            res = re.search('(\d\.\d\d\d)\-(\d\d\d)', line[start:end])
                             if res:
                                 return dtype(res.group(1)+'E-'+res.group(2))
                             else:
                                 raise Exception('PARSE ERROR: unknown format of the par value (%s)'%line[start:end])
-                elif dtype==int and qnt=='local_iso_id':
-                    if line[start:end]=='0': return 10
+                elif dtype == int and qnt == 'local_iso_id':
+                    if line[start:end] == '0':
+                        return 10
                     try:
                         return dtype(line[start:end])
                     except ValueError:
                         # convert letters to numbers: A->11, B->12, etc... ; .par file must be in ASCII or Unicode.
-                        return 11+ord(line[start:end])-ord('A')
+                        return 11 + ord(line[start:end]) - ord('A')
                 else:
                     return dtype(line[start:end])
-            #cfunc.__doc__ = 'converter {} {}'.format(qnt, fmt) # doesn't work in earlier versions of Python
+
             converters.append(cfunc)
-            #start = end
-        #data_matrix = [[cvt(line) for cvt in converters] for line in InfileData]
+
         flag_EOF = False
         line_count = 0
         data_matrix = []
         while True:
-            if nlines is not None and line_count>=nlines: break   
+            if nlines is not None and line_count >= nlines: break
             line = InfileData.readline()
-            if line=='': # end of file is represented by an empty string
+            if line == '': # end of file is represented by an empty string
                 flag_EOF = True
                 break 
             data_matrix.append([cvt(line) for cvt in converters])
             line_count += 1
         data_columns = zip(*data_matrix)
         for qnt, col in zip(quantities, data_columns):
-            #LOCAL_TABLE_CACHE[TableName]['data'][qnt].extend(col) # old code
-            if type(col[0]) in {int,float}:
+            if type(col[0]) in {int, float}:
                 LOCAL_TABLE_CACHE[TableName]['data'][qnt] = np.array(col) # new code
             else:
                 LOCAL_TABLE_CACHE[TableName]['data'][qnt].extend(col) # old code
-            #LOCAL_TABLE_CACHE[TableName]['data'][qnt] = list(col)
-            #LOCAL_TABLE_CACHE[TableName]['data'][qnt] = col
-        header['number_of_rows'] = line_count = (
-            len(LOCAL_TABLE_CACHE[TableName]['data'][quantities[0]]))
+
+        header['number_of_rows'] = line_count = (len(LOCAL_TABLE_CACHE[TableName]['data'][quantities[0]]))
             
     # Convert all columns to numpy arrays
     par_names = LOCAL_TABLE_CACHE[TableName]['header']['order']
@@ -1115,11 +1077,11 @@ def storage2cache(TableName,cast=True,ext=None,nlines=None,pos=None):
         for par_name in LOCAL_TABLE_CACHE[TableName]['header']['extra']:
             par_format = LOCAL_TABLE_CACHE[TableName]['header']['extra_format'][par_name]
             regex = FORMAT_PYTHON_REGEX
-            (lng,trail,lngpnt,ty) = re.search(regex,par_format).groups()
-            if ty.lower() in ['d','e','f']:
+            (lng, trail, lngpnt, ty) = re.search(regex, par_format).groups()
+            if ty.lower() in ['d', 'e', 'f']:
                 column = LOCAL_TABLE_CACHE[TableName]['data'][par_name]
                 colmask = np.isnan(column)
-                LOCAL_TABLE_CACHE[TableName]['data'][par_name] = np.ma.array(column,mask=colmask)
+                LOCAL_TABLE_CACHE[TableName]['data'][par_name] = np.ma.array(column, mask=colmask)
     
     # Delete all character-separated values, treat them as column-fixed.
     try:
@@ -1139,73 +1101,13 @@ def storage2cache(TableName,cast=True,ext=None,nlines=None,pos=None):
     print('                     Lines parsed: %d' % line_count)
     return flag_EOF    
     
-## old version based on regular expressions    
-#def storage2cache(TableName):
-#    fullpath_data,fullpath_header = getFullTableAndHeaderName(TableName)
-#    InfileData = open(fullpath_data,'r')
-#    InfileHeader = open(fullpath_header,'r')
-#    #try:
-#    header_text = InfileHeader.read()
-#    try:
-#        Header = json.loads(header_text)
-#    except:
-#        print('HEADER:')
-#        print(header_text)
-#        raise Exception('Invalid header')
-#    LOCAL_TABLE_CACHE[TableName] = {}
-#    LOCAL_TABLE_CACHE[TableName]['header'] = Header
-#    LOCAL_TABLE_CACHE[TableName]['data'] = {}
-#    # Check if Header['order'] and Header['extra'] contain
-#    #  parameters with same names, raise exception if true.
-#    intersct = set(Header.get('order',[])).intersection(set(Header.get('extra',[])))
-#    if intersct:
-#        raise Exception('Parameters with the same names: {}'.format(intersct))
-#    # initialize empty data to avoid problems
-#    glob_order = []; glob_format = {}; glob_default = {}
-#    if "order" in LOCAL_TABLE_CACHE[TableName]['header'].keys():
-#        glob_order += LOCAL_TABLE_CACHE[TableName]['header']['order']
-#        glob_format.update(LOCAL_TABLE_CACHE[TableName]['header']['format'])
-#        glob_default.update(LOCAL_TABLE_CACHE[TableName]['header']['default'])
-#        for par_name in LOCAL_TABLE_CACHE[TableName]['header']['order']:
-#            LOCAL_TABLE_CACHE[TableName]['data'][par_name] = []
-#    if "extra" in LOCAL_TABLE_CACHE[TableName]['header'].keys():
-#        glob_order += LOCAL_TABLE_CACHE[TableName]['header']['extra']
-#        glob_format.update(LOCAL_TABLE_CACHE[TableName]['header']['extra_format'])
-#        for par_name in LOCAL_TABLE_CACHE[TableName]['header']['extra']:
-#            glob_default[par_name] = PARAMETER_META[par_name]['default_fmt']
-#            LOCAL_TABLE_CACHE[TableName]['data'][par_name] = []
-#    line_count = 0
-#    for line in InfileData:
-#        try:
-#            RowObject = getRowObjectFromString(line,TableName)
-#            line_count += 1
-#        except:
-#            continue
-#        addRowObject(RowObject,TableName)
-#    LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows'] = line_count
-#    # Delete all character-separated values, treat them as column-fixed.
-#    try:
-#        del LOCAL_TABLE_CACHE[TableName]['header']['extra']
-#        del LOCAL_TABLE_CACHE[TableName]['header']['extra_format']
-#        del LOCAL_TABLE_CACHE[TableName]['header']['extra_separator']
-#    except:
-#        pass
-#    # Update header.order/format with header.extra/format if exist.
-#    LOCAL_TABLE_CACHE[TableName]['header']['order'] = glob_order
-#    LOCAL_TABLE_CACHE[TableName]['header']['format'] = glob_format
-#    LOCAL_TABLE_CACHE[TableName]['header']['default'] = glob_default
-#    InfileData.close()
-#    InfileHeader.close()
-#    print('                     Lines parsed: %d' % line_count)
-#    pass
-
 # / FORMAT CONVERSION LAYER    
     
 def getTableNamesFromStorage(StorageName):
     file_names = listdir(StorageName)
     table_names = []
     for file_name in file_names:
-        matchObject = re.search('(.+)\.header$',file_name)
+        matchObject = re.search('(.+)\.header$', file_name)
         if matchObject:
            table_names.append(matchObject.group(1))
     return table_names
@@ -1221,14 +1123,15 @@ def scanForNewParfiles(StorageName):
     for file_name in file_names:
         # create dictionary of unique headers
         try:
-            fname,fext = re.search('(.+)\.(\w+)',file_name).groups()
+            fname, fext = re.search('(.+)\.(\w+)', file_name).groups()
         except:
             continue
-        if fext == 'header': headers[fname] = True
+        if fext == 'header':
+            headers[fname] = True
     for file_name in file_names:
         # check if extension is 'par' and the header is absent
         try:
-            fname,fext = re.search('(.+)\.(\w+)',file_name).groups()
+            fname, fext = re.search('(.+)\.(\w+)', file_name).groups()
         except:
             continue
         if fext == 'par' and fname not in headers:
@@ -1236,11 +1139,11 @@ def scanForNewParfiles(StorageName):
     return parfiles_without_header
 
 def createHeader(TableName):
-    fname = TableName+'.header'
-    fp = open(VARIABLES['BACKEND_DATABASE_NAME']+'/'+fname,'w')
+    fname = TableName + '.header'
+    fp = open(VARIABLES['BACKEND_DATABASE_NAME']+'/'+fname, 'w')
     if os.path.isfile(TableName):
         raise Exception('File \"%s\" already exists!' % fname)
-    fp.write(json.dumps(HITRAN_DEFAULT_HEADER,indent=2))
+    fp.write(json.dumps(HITRAN_DEFAULT_HEADER, indent=2))
     fp.close()
 
 def loadCache():
@@ -1288,18 +1191,18 @@ def databaseCommit():
 # ----------------------------------------------------
 # ----------------------------------------------------
 # hierarchic query.condition language:
-# Conditions: CONS = ('and', ('=','p1','p2'), ('<','p1',13))
+# Conditions: CONS = ('and', ('=', 'p1', 'p2'), ('<', 'p1', 13))
 # String literals are distinguished from variable names 
-#  by using the operation ('STRING','some_string')
+#  by using the operation ('STRING', 'some_string')
 # ----------------------------------------------------
 
 # necessary conditions for hitranonline:
-SAMPLE_CONDITIONS = ('AND',('SET','internal_iso_id',[1,2,3,4,5,6]),('>=','nu',0),('<=','nu',100))
+SAMPLE_CONDITIONS = ('AND', ('SET', 'internal_iso_id', [1, 2, 3, 4, 5, 6]), ('>=', 'nu', 0), ('<=', 'nu', 100))
 
 # sample hitranonline protocol
 # http://hitran.cloudapp.net/lbl/5?output_format_id=1&iso_ids_list=5&numin=0&numax=100&access=api&key=e20e4bd3-e12c-4931-99e0-4c06e88536bd
 
-CONDITION_OPERATIONS = set(['AND','OR','NOT','RANGE','IN','<','>','<=','>=','==','!=','LIKE','STR','+','-','*','/','MATCH','SEARCH','FINDALL'])
+CONDITION_OPERATIONS = set(['AND', 'OR', 'NOT', 'RANGE', 'IN', '<', '>', '<=', '>=', '==', '!=', 'LIKE', 'STR', '+', '-', '*', '/', 'MATCH', 'SEARCH', 'FINDALL'])
 
 # Operations used in Condition verification
 # Basic scheme: operationXXX(args),
@@ -1323,10 +1226,10 @@ def operationNOT(arg):
     # one argument
     return not arg
 
-def operationRANGE(x,x_min,x_max):
+def operationRANGE(x, x_min, x_max):
     return x_min <= x <= x_max
     
-def operationSUBSET(arg1,arg2):
+def operationSUBSET(arg1, arg2):
     # True if arg1 is subset of arg2
     # arg1 is an element
     # arg2 is a set
@@ -1334,47 +1237,47 @@ def operationSUBSET(arg1,arg2):
 
 def operationLESS(args):
     # any number of args
-    for i in range(1,len(args)):
+    for i in range(1, len(args)):
         if args[i-1] >= args[i]:
            return False
     return True
 
 def operationMORE(args):
     # any number of args
-    for i in range(1,len(args)):
+    for i in range(1, len(args)):
         if args[i-1] <= args[i]:
            return False
     return True
 
 def operationLESSOREQUAL(args):
     # any number of args
-    for i in range(1,len(args)):
+    for i in range(1, len(args)):
         if args[i-1] > args[i]:
            return False
     return True
 
 def operationMOREOREQUAL(args):
     # any number of args
-    for i in range(1,len(args)):
+    for i in range(1, len(args)):
         if args[i-1] < args[i]:
            return False
     return True
 
 def operationEQUAL(args):
     # any number of args
-    for i in range(1,len(args)):
+    for i in range(1, len(args)):
         if args[i] != args[i-1]:
            return False
     return True
 
-def operationNOTEQUAL(arg1,arg2):
+def operationNOTEQUAL(arg1, arg2):
     return arg1 != arg2
     
 def operationSUM(args):
     # any numbers of arguments
-    if type(args[0]) in set([int,float]):
+    if type(args[0]) in set([int, float]):
        result = 0
-    elif type(args[0]) in set([str,unicode]):
+    elif type(args[0]) in set([str, unicode]):
        result = ''
     else:
        raise Exception('SUM error: unknown arg type')
@@ -1382,12 +1285,12 @@ def operationSUM(args):
         result += arg
     return result
 
-def operationDIFF(arg1,arg2):
+def operationDIFF(arg1, arg2):
     return arg1-arg2
 
 def operationMUL(args):
     # any numbers of arguments
-    if type(args[0]) in set([int,float]):
+    if type(args[0]) in set([int, float]):
        result = 1
     else:
        raise Exception('MUL error: unknown arg type')
@@ -1395,7 +1298,7 @@ def operationMUL(args):
         result *= arg
     return result
 
-def operationDIV(arg1,arg2):
+def operationDIV(arg1, arg2):
     return arg1/arg2
 
 def operationSTR(arg):
@@ -1406,33 +1309,33 @@ def operationSTR(arg):
 
 def operationSET(arg):
     # transform arg to list
-    if type(arg) not in set([list,tuple,set]):
+    if type(arg) not in set([list, tuple, set]):
         raise Exception('Type mismatch: SET')
     return list(arg)
 
-def operationMATCH(arg1,arg2):
+def operationMATCH(arg1, arg2):
     # Match regex (arg1) and string (arg2)
-    #return bool(re.match(arg1,arg2)) # works wrong
-    return bool(re.search(arg1,arg2))
+    #return bool(re.match(arg1, arg2)) # works wrong
+    return bool(re.search(arg1, arg2))
 
-def operationSEARCH(arg1,arg2):
+def operationSEARCH(arg1, arg2):
     # Search regex (arg1) in string (arg2)
     # Output list of entries
-    group = re.search(arg1,arg2).groups()
+    group = re.search(arg1, arg2).groups()
     result = []
     for item in group:
-        result.append(('STR',item))
+        result.append(('STR', item))
     return result
 
-def operationFINDALL(arg1,arg2):
+def operationFINDALL(arg1, arg2):
     # Search all groups of a regex
     # Output a list of groups of entries
     # XXX: If a group has more than 1 entry,
     #    there could be potential problems
-    list_of_groups = re.findall(arg1,arg2)
+    list_of_groups = re.findall(arg1, arg2)
     result = []
     for item in list_of_groups:
-        result.append(('STR',item))
+        result.append(('STR', item))
     return result
 
 def operationLIST(args):
@@ -1447,9 +1350,9 @@ GROUP_INDEX = {}
 # GROUP_INDEX has the following structure:
 #  GROUP_INDEX[KEY] = VALUE
 #    KEY = table line values
-#    VALUE = {'FUNCTIONS':DICT,'FLAG':LOGICAL,'ROWID':INTEGER}
+#    VALUE = {'FUNCTIONS':DICT, 'FLAG':LOGICAL, 'ROWID':INTEGER}
 #      FUNCTIONS = {'FUNC_NAME':DICT}
-#            FUNC_NAME = {'FLAG':LOGICAL,'NAME':STRING}
+#            FUNC_NAME = {'FLAG':LOGICAL, 'NAME':STRING}
 
 # name and default value
 GROUP_FUNCTION_NAMES = { 'COUNT' :  0,
@@ -1466,7 +1369,7 @@ def clearGroupIndex():
     for key in GROUP_INDEX.keys():
         del GROUP_INDEX[key]
 
-def getValueFromGroupIndex(GroupIndexKey,FunctionName):
+def getValueFromGroupIndex(GroupIndexKey, FunctionName):
     # If no such index_key, create it and return a value
     if FunctionName not in GROUP_FUNCTION_NAMES:
        raise Exception('No such function \"%s\"' % FunctionName)
@@ -1480,7 +1383,7 @@ def getValueFromGroupIndex(GroupIndexKey,FunctionName):
          GROUP_FUNCTION_NAMES[FunctionName]
     return GROUP_INDEX[GroupIndexKey]['FUNCTIONS'][FunctionName]['VALUE']
 
-def setValueToGroupIndex(GroupIndexKey,FunctionName,Value):
+def setValueToGroupIndex(GroupIndexKey, FunctionName, Value):
     GROUP_INDEX[GroupIndexKey]['FUNCTIONS'][FunctionName]['VALUE'] = Value
 
 GROUP_DESC = {}
@@ -1498,12 +1401,12 @@ def initializeGroup(GroupIndexKey):
 
 def groupCOUNT(GroupIndexKey):
     FunctionName = 'COUNT'
-    Value = getValueFromGroupIndex(GroupIndexKey,FunctionName)
+    Value = getValueFromGroupIndex(GroupIndexKey, FunctionName)
     if GroupIndexKey:
        if GROUP_INDEX[GroupIndexKey]['FUNCTIONS'][FunctionName]['FLAG']:
           GROUP_INDEX[GroupIndexKey]['FUNCTIONS'][FunctionName]['FLAG'] = False
           Value = Value + 1
-          setValueToGroupIndex(GroupIndexKey,FunctionName,Value)
+          setValueToGroupIndex(GroupIndexKey, FunctionName, Value)
     return Value
 
 def groupSUM():
@@ -1539,11 +1442,11 @@ OPERATORS = {\
 '!' : lambda args : operationNOT(args[0]),
 'NOT' : lambda args : operationNOT(args[0]),
 # Between
-'RANGE' : lambda args : operationRANGE(args[0],args[1],args[2]),
-'BETWEEN' : lambda args : operationRANGE(args[0],args[1],args[2]),
+'RANGE' : lambda args : operationRANGE(args[0], args[1], args[2]),
+'BETWEEN' : lambda args : operationRANGE(args[0], args[1], args[2]),
 # Subset
-'IN' : lambda args : operationSUBSET(args[0],args[1]),
-'SUBSET': lambda args : operationSUBSET(args[0],args[1]),
+'IN' : lambda args : operationSUBSET(args[0], args[1]),
+'SUBSET': lambda args : operationSUBSET(args[0], args[1]),
 # Less
 '<' : lambda args : operationLESS(args),
 'LESS' : lambda args : operationLESS(args),
@@ -1567,30 +1470,30 @@ OPERATORS = {\
 'EQUAL' : lambda args : operationEQUAL(args),
 'EQUALS' : lambda args : operationEQUAL(args),
 # Not equal
-'!=' : lambda args : operationNOTEQUAL(args[0],args[1]),
-'<>' : lambda args : operationNOTEQUAL(args[0],args[1]),
-'~=' : lambda args : operationNOTEQUAL(args[0],args[1]),
-'NE' : lambda args : operationNOTEQUAL(args[0],args[1]),
-'NOTEQUAL' : lambda args : operationNOTEQUAL(args[0],args[1]),
+'!=' : lambda args : operationNOTEQUAL(args[0], args[1]),
+'<>' : lambda args : operationNOTEQUAL(args[0], args[1]),
+'~=' : lambda args : operationNOTEQUAL(args[0], args[1]),
+'NE' : lambda args : operationNOTEQUAL(args[0], args[1]),
+'NOTEQUAL' : lambda args : operationNOTEQUAL(args[0], args[1]),
 # Plus
 '+' : lambda args : operationSUM(args),
 'SUM' : lambda args : operationSUM(args),
 # Minus
-'-' : lambda args : operationDIFF(args[0],args[1]),
-'DIFF' : lambda args : operationDIFF(args[0],args[1]),
+'-' : lambda args : operationDIFF(args[0], args[1]),
+'DIFF' : lambda args : operationDIFF(args[0], args[1]),
 # Mul
 '*' : lambda args : operationMUL(args),
 'MUL' : lambda args : operationMUL(args),
 # Div
-'/' : lambda args : operationDIV(args[0],args[1]),
-'DIV' : lambda args : operationDIV(args[0],args[1]),
+'/' : lambda args : operationDIV(args[0], args[1]),
+'DIV' : lambda args : operationDIV(args[0], args[1]),
 # Regexp match
-'MATCH' : lambda args : operationMATCH(args[0],args[1]),
-'LIKE' : lambda args : operationMATCH(args[0],args[1]),
+'MATCH' : lambda args : operationMATCH(args[0], args[1]),
+'LIKE' : lambda args : operationMATCH(args[0], args[1]),
 # Regexp search
-'SEARCH' : lambda args : operationSEARCH(args[0],args[1]),
+'SEARCH' : lambda args : operationSEARCH(args[0], args[1]),
 # Regexp findal
-'FINDALL' : lambda args : operationFINDALL(args[0],args[1]),
+'FINDALL' : lambda args : operationFINDALL(args[0], args[1]),
 # Group count
 'COUNT' : lambda args : groupCOUNT(args[0]),
 }
@@ -1598,18 +1501,18 @@ OPERATORS = {\
 # new evaluateExpression function,
 #  accounting for groups
 """
-def evaluateExpression(root,VarDictionary,GroupIndexKey=None):
+def evaluateExpression(root, VarDictionary, GroupIndexKey=None):
     # input = local tree root
     # XXX: this could be very slow due to passing
     #      every time VarDictionary as a parameter
     # Two special cases: 1) root=varname
     #                    2) root=list/tuple
     # These cases must be processed in a separate way
-    if type(root) in set([list,tuple]):
+    if type(root) in set([list, tuple]):
        # root is not a leaf
        head = root[0].upper()
        # string constants are treated specially
-       if head in set(['STR','STRING']): # one arg
+       if head in set(['STR', 'STRING']): # one arg
           return operationSTR(root[1])
        elif head in set(['SET']):
           return operationSET(root[1])
@@ -1617,46 +1520,46 @@ def evaluateExpression(root,VarDictionary,GroupIndexKey=None):
        args = []
        # evaluate arguments recursively
        for element in tail: # resolve tree by recursion
-           args.append(evaluateExpression(element,VarDictionary,GroupIndexKey))
+           args.append(evaluateExpression(element, VarDictionary, GroupIndexKey))
        # call functions with evaluated arguments
        if head in set(['LIST']): # list arg
           return operationLIST(args)
-       elif head in set(['&','&&','AND']): # many args 
+       elif head in set(['&', '&&', 'AND']): # many args
           return operationAND(args)
-       elif head in set(['|','||','OR']): # many args
+       elif head in set(['|', '||', 'OR']): # many args
           return operationOR(args)
-       elif head in set(['!','NOT']): # one args
+       elif head in set(['!', 'NOT']): # one args
           return operationNOT(args[0])
-       elif head in set(['RANGE','BETWEEN']): # three args
-          return operationRANGE(args[0],args[1],args[2])
-       elif head in set(['IN','SUBSET']): # two args
-          return operationSUBSET(args[0],args[1])
-       elif head in set(['<','LESS','LT']): # many args
+       elif head in set(['RANGE', 'BETWEEN']): # three args
+          return operationRANGE(args[0], args[1], args[2])
+       elif head in set(['IN', 'SUBSET']): # two args
+          return operationSUBSET(args[0], args[1])
+       elif head in set(['<', 'LESS', 'LT']): # many args
           return operationLESS(args)
-       elif head in set(['>','MORE','MT']): # many args
+       elif head in set(['>', 'MORE', 'MT']): # many args
           return operationMORE(args)
-       elif head in set(['<=','LESSOREQUAL','LTE']): # many args
+       elif head in set(['<=', 'LESSOREQUAL', 'LTE']): # many args
           return operationLESSOREQUAL(args)
-       elif head in set(['>=','MOREOREQUAL','MTE']): # many args
+       elif head in set(['>=', 'MOREOREQUAL', 'MTE']): # many args
           return operationMOREOREQUAL(args)
-       elif head in set(['=','==','EQ','EQUAL','EQUALS']): # many args
+       elif head in set(['=', '==', 'EQ', 'EQUAL', 'EQUALS']): # many args
           return operationEQUAL(args)
-       elif head in set(['!=','<>','~=','NE','NOTEQUAL']): # two args
-          return operationNOTEQUAL(args[0],args[1])
-       elif head in set(['+','SUM']): # many args
+       elif head in set(['!=', '<>', '~=', 'NE', 'NOTEQUAL']): # two args
+          return operationNOTEQUAL(args[0], args[1])
+       elif head in set(['+', 'SUM']): # many args
           return operationSUM(args)
-       elif head in set(['-','DIFF']): # two args
-          return operationDIFF(args[0],args[1])
-       elif head in set(['*','MUL']): # many args
+       elif head in set(['-', 'DIFF']): # two args
+          return operationDIFF(args[0], args[1])
+       elif head in set(['*', 'MUL']): # many args
           return operationMUL(args)
-       elif head in set(['/','DIV']): # two args
-          return operationDIV(args[0],args[1])
-       elif head in set(['MATCH','LIKE']): # two args
-          return operationMATCH(args[0],args[1])
+       elif head in set(['/', 'DIV']): # two args
+          return operationDIV(args[0], args[1])
+       elif head in set(['MATCH', 'LIKE']): # two args
+          return operationMATCH(args[0], args[1])
        elif head in set(['SEARCH']): # two args
-          return operationSEARCH(args[0],args[1])
+          return operationSEARCH(args[0], args[1])
        elif head in set(['FINDALL']): # two args
-          return operationFINDALL(args[0],args[1])
+          return operationFINDALL(args[0], args[1])
        # --- GROUPING OPERATIONS ---
        elif head in set(['COUNT']):
           return groupCOUNT(GroupIndexKey)
@@ -1670,18 +1573,18 @@ def evaluateExpression(root,VarDictionary,GroupIndexKey=None):
        return root
 """
 
-def evaluateExpression(root,VarDictionary,GroupIndexKey=None):
+def evaluateExpression(root, VarDictionary, GroupIndexKey=None):
     # input = local tree root
     # XXX: this could be very slow due to passing
     #      every time VarDictionary as a parameter
     # Two special cases: 1) root=varname
     #                    2) root=list/tuple
     # These cases must be processed in a separate way
-    if type(root) in set([list,tuple]):
+    if type(root) in set([list, tuple]):
         # root is not a leaf
         head = root[0].upper()
         # string constants are treated specially
-        if head in set(['STR','STRING']): # one arg
+        if head in set(['STR', 'STRING']): # one arg
             return operationSTR(root[1])
         elif head in set(['SET']):
             return operationSET(root[1])
@@ -1689,7 +1592,7 @@ def evaluateExpression(root,VarDictionary,GroupIndexKey=None):
         args = []
         # evaluate arguments recursively
         for element in tail: # resolve tree by recursion
-            args.append(evaluateExpression(element,VarDictionary,GroupIndexKey))
+            args.append(evaluateExpression(element, VarDictionary, GroupIndexKey))
         # call functions with evaluated arguments
         try:
             return OPERATORS[head](args)
@@ -1706,14 +1609,14 @@ def getVarDictionary(RowObject):
     # get VarDict from RowObject
     # VarDict: par_name => par_value
     VarDictionary = {}
-    for par_name,par_value,par_format in RowObject:
+    for par_name, par_value, par_format in RowObject:
         VarDictionary[par_name] = par_value
     return VarDictionary
 
-def checkRowObject(RowObject,Conditions,VarDictionary):
+def checkRowObject(RowObject, Conditions, VarDictionary):
     #VarDictionary = getVarDictionary(RowObject)   
     if Conditions:
-       Flag = evaluateExpression(Conditions,VarDictionary)
+       Flag = evaluateExpression(Conditions, VarDictionary)
     else:
        Flag=True
     return Flag
@@ -1728,8 +1631,8 @@ def checkRowObject(RowObject,Conditions,VarDictionary):
 # ----------------------------------------------------
 
 # Bind an expression to a new parameter
-#   in a form: ('BIND','new_par',('some_exp',...))
-def operationBIND(parname,Expression,VarDictionary):
+#   in a form: ('BIND', 'new_par', ('some_exp', ...))
+def operationBIND(parname, Expression, VarDictionary):
     pass
 
 # This section is for more detailed processing of parlists. 
@@ -1738,7 +1641,7 @@ def operationBIND(parname,Expression,VarDictionary):
 #   existing parameters, but also new parameters
 #   derived from functions on a special prefix language
 # For this reason subsetOfRowObject(..) must be substituted
-#   by newRowObject(ParameterNames,RowObject)
+#   by newRowObject(ParameterNames, RowObject)
 
 # For parsing use the function evaluateExpression
 
@@ -1749,7 +1652,7 @@ def operationBIND(parname,Expression,VarDictionary):
 # For more ideas and info see LANGUAGE_REFERENCE
 
 # more advansed version of expression evaluator
-def evaluateExpressionPAR(ParameterNames,VarDictionary=None):
+def evaluateExpressionPAR(ParameterNames, VarDictionary=None):
     # RETURN: 1) Upper-level Expression names
     #         2) Upper-level Expression values
     # Is it reasonable to pass a Context to every parse function?
@@ -1758,14 +1661,14 @@ def evaluateExpressionPAR(ParameterNames,VarDictionary=None):
     #   2) if element is a par name: return par name
     #      if element is an BIND expression: return bind name
     #              (see operationBIND)
-    #   3) if element is an anonymous expression: return #N(=1,2,3...)
+    #   3) if element is an anonymous expression: return #N(=1, 2, 3...)
     # N.B. Binds can be only on the 0-th level of Expression    
     pass
 
 def getContextFormat(RowObject):
     # Get context format from the whole RowObject
     ContextFormat = {}
-    for par_name,par_value,par_format in RowObject:
+    for par_name, par_value, par_format in RowObject:
         ContextFormat[par_name] = par_format
     return ContextFormat
 
@@ -1799,7 +1702,7 @@ def getDefaultValue(Type):
 # GROUP_INDEX contains information needed to calculate streamed group functions
 #  such as COUNT, AVG, MIN, MAX etc...
 
-def newRowObject(ParameterNames,RowObject,VarDictionary,ContextFormat,GroupIndexKey=None):
+def newRowObject(ParameterNames, RowObject, VarDictionary, ContextFormat, GroupIndexKey=None):
     # Return a subset of RowObject according to 
     # ParameterNames include either par names
     #  or expressions containing par names literals
@@ -1807,16 +1710,16 @@ def newRowObject(ParameterNames,RowObject,VarDictionary,ContextFormat,GroupIndex
     anoncount = 0
     RowObjectNew = []
     for expr in ParameterNames:
-        if type(expr) in set([list,tuple]): # bind
+        if type(expr) in set([list, tuple]): # bind
            head = expr[0]
-           if head in set(['let','bind','LET','BIND']):
+           if head in set(['let', 'bind', 'LET', 'BIND']):
               par_name = expr[1]
               par_expr = expr[2]
            else:
               par_name = "#%d" % anoncount
               anoncount += 1
               par_expr = expr
-           par_value = evaluateExpression(par_expr,VarDictionary,GroupIndexKey)
+           par_value = evaluateExpression(par_expr, VarDictionary, GroupIndexKey)
            try:
               par_format = expr[3]
            except:
@@ -1825,7 +1728,7 @@ def newRowObject(ParameterNames,RowObject,VarDictionary,ContextFormat,GroupIndex
            par_name = expr
            par_value = VarDictionary[par_name]
            par_format = ContextFormat[par_name]
-        RowObjectNew.append((par_name,par_value,par_format))
+        RowObjectNew.append((par_name, par_value, par_format))
     return RowObjectNew
 
 # ----------------------------------------------------
@@ -1871,26 +1774,26 @@ def describeTable(TableName):
     print('')
     for par_name in LOCAL_TABLE_CACHE[TableName]['header']['order']:
         par_format = LOCAL_TABLE_CACHE[TableName]['header']['format'][par_name]
-        print('%20s %20s' % (par_name,par_format))
+        print('%20s %20s' % (par_name, par_format))
     print('-----------------------------------------')
 
 # Write a table to File or STDOUT
-def outputTable(TableName,Conditions=None,File=None,Header=True):
+def outputTable(TableName, Conditions=None, File=None, Header=True):
     # Display or record table with condition checking
     if File:
        Header = False
-       OutputFile = open(File,'w')
+       OutputFile = open(File, 'w')
     if Header:
        headstr = putTableHeaderToString(TableName)
        if File:
           OutputFile.write(headstr)
        else:
           print(headstr)
-    for RowID in range(0,LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows']):
-        RowObject = getRowObject(RowID,TableName)
+    for RowID in range(0, LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows']):
+        RowObject = getRowObject(RowID, TableName)
         VarDictionary = getVarDictionary(RowObject)
         VarDictionary['LineNumber'] = RowID
-        if not checkRowObject(RowObject,Conditions,VarDictionary):
+        if not checkRowObject(RowObject, Conditions, VarDictionary):
            continue
         raw_string = putRowObjectToString(RowObject)
         if File:
@@ -1899,14 +1802,14 @@ def outputTable(TableName,Conditions=None,File=None,Header=True):
            print(raw_string)
 
 # Create table "prototype-based" way
-def createTable(TableName,RowObjectDefault):
+def createTable(TableName, RowObjectDefault):
     # create a Table based on a RowObjectDefault
     LOCAL_TABLE_CACHE[TableName] = {}
     header_order = []
     header_format = {}
     header_default = {}
     data = {}
-    for par_name,par_value,par_format in RowObjectDefault:
+    for par_name, par_value, par_format in RowObjectDefault:
         header_order.append(par_name)
         header_format[par_name] = par_format
         header_default[par_name] = par_value
@@ -1948,7 +1851,7 @@ def dropTable(TableName):
     pass # TODO
 
 # Returns a column corresponding to parameter name
-def getColumn(TableName,ParameterName):
+def getColumn(TableName, ParameterName):
     """
     INPUT PARAMETERS: 
         TableName:      source table name     (required)
@@ -1961,13 +1864,13 @@ def getColumn(TableName,ParameterName):
         table TableName. Column is returned as a list of values.
     ---
     EXAMPLE OF USAGE:
-        p1 = getColumn('sampletab','p1')
+        p1 = getColumn('sampletab', 'p1')
     ---
     """
     return LOCAL_TABLE_CACHE[TableName]['data'][ParameterName]
 
 # Returns a list of columns corresponding to parameter names
-def getColumns(TableName,ParameterNames):
+def getColumns(TableName, ParameterNames):
     """
     INPUT PARAMETERS: 
         TableName:       source table name           (required)
@@ -1980,7 +1883,7 @@ def getColumns(TableName,ParameterNames):
         table TableName. Columns are returned as a tuple of lists.
     ---
     EXAMPLE OF USAGE:
-        p1,p2,p3 = getColumns('sampletab',('p1','p2','p3'))
+        p1, p2, p3 = getColumns('sampletab', ('p1', 'p2', 'p3'))
     ---
     """
     Columns = []
@@ -1988,7 +1891,7 @@ def getColumns(TableName,ParameterNames):
         Columns.append(LOCAL_TABLE_CACHE[TableName]['data'][par_name])
     return Columns
 
-def addColumn(TableName,ParameterName,Before=None,Expression=None,Type=None,Default=None,Format=None):
+def addColumn(TableName, ParameterName, Before=None, Expression=None, Type=None, Default=None, Format=None):
     if ParameterName in LOCAL_TABLE_CACHE[TableName]['header']['format']:
        raise Exception('Column \"%s\" already exists' % ParameterName)
     if not Type: Type = float
@@ -1997,14 +1900,14 @@ def addColumn(TableName,ParameterName,Before=None,Expression=None,Type=None,Defa
     number_of_rows = LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows']
     # Mess with data
     if not Expression:
-       LOCAL_TABLE_CACHE[TableName]['data'][ParameterName]=[Default for i in range(0,number_of_rows)]
+       LOCAL_TABLE_CACHE[TableName]['data'][ParameterName]=[Default for i in range(0, number_of_rows)]
     else:
        data = []
-       for RowID in range(0,number_of_rows):
-           RowObject = getRowObject(RowID,TableName)
+       for RowID in range(0, number_of_rows):
+           RowObject = getRowObject(RowID, TableName)
            VarDictionary = getVarDictionary(RowObject)
            VarDictionary['LineNumber'] = RowID
-           par_value = evaluateExpression(Expression,VarDictionary)
+           par_value = evaluateExpression(Expression, VarDictionary)
            data.append(par_value)
            LOCAL_TABLE_CACHE[TableName]['data'][ParameterName] = data
     # Mess with header
@@ -2017,13 +1920,13 @@ def addColumn(TableName,ParameterName,Before=None,Expression=None,Type=None,Defa
        #    if par_name == Before: break
        #    i += 1
        i = header_order.index(Before)
-       header_order = header_order[:i] + [ParameterName,] + header_order[i:]
+       header_order = header_order[:i] + [ParameterName, ] + header_order[i:]
     LOCAL_TABLE_CACHE[TableName]['header']['order'] = header_order
     LOCAL_TABLE_CACHE[TableName]['header']['format'][ParameterName] = Format
     LOCAL_TABLE_CACHE[TableName]['header']['default'][ParameterName] = Default
    
 
-def deleteColumn(TableName,ParameterName):
+def deleteColumn(TableName, ParameterName):
     if ParameterName not in LOCAL_TABLE_CACHE[TableName]['header']['format']:
        raise Exception('No such column \"%s\"' % ParameterName)
     # Mess with data
@@ -2036,26 +1939,26 @@ def deleteColumn(TableName,ParameterName):
     # Mess with header
     del LOCAL_TABLE_CACHE[TableName]['data'][ParameterName]
 
-def deleteColumns(TableName,ParameterNames):
-    if type(ParameterNames) not in set([list,tuple,set]):
+def deleteColumns(TableName, ParameterNames):
+    if type(ParameterNames) not in set([list, tuple, set]):
        ParameterNames = [ParameterNames]
     for ParameterName in ParameterNames:
-        deleteColumn(TableName,ParameterName)
+        deleteColumn(TableName, ParameterName)
 
-def renameColumn(TableName,OldParameterName,NewParameterName):
+def renameColumn(TableName, OldParameterName, NewParameterName):
     pass
 
 def insertRow():
     pass
 
-def deleteRows(TableName,ParameterNames,Conditions):
+def deleteRows(TableName, ParameterNames, Conditions):
     pass
 
 # select from table to another table
-def selectInto(DestinationTableName,TableName,ParameterNames,Conditions):
+def selectInto(DestinationTableName, TableName, ParameterNames, Conditions):
     # TableName must refer to an existing table in cache!!
     # Conditions = Restrictables in specific format
-    # Sample conditions: cond = {'par1':{'range',[b_lo,b_hi]},'par2':b}
+    # Sample conditions: cond = {'par1':{'range', [b_lo, b_hi]}, 'par2':b}
     # return structure similar to TableObject and put it to QUERY_BUFFER
     # if ParameterNames is '*' then all parameters are used
     #table_columns = LOCAL_TABLE_CACHE[TableName]['data'].keys()
@@ -2066,20 +1969,20 @@ def selectInto(DestinationTableName,TableName,ParameterNames,Conditions):
     #condition_variables = getConditionVariables(Conditions)
     #strange_pars = set(condition_variables)-set(table_variables)
     #if strange_pars: 
-    #   raise Exception('The following parameters are not in the table \"%s\"' % (TableName,list(strange_pars)))
+    #   raise Exception('The following parameters are not in the table \"%s\"' % (TableName, list(strange_pars)))
     # do full scan each time
     if DestinationTableName == TableName:
        raise Exception('Selecting into source table is forbidden')
     table_length = LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows']
     row_count = 0
-    for RowID in range(0,table_length):
-        RowObject = getRowObject(RowID,TableName)
+    for RowID in range(0, table_length):
+        RowObject = getRowObject(RowID, TableName)
         VarDictionary = getVarDictionary(RowObject)
         VarDictionary['LineNumber'] = RowID
         ContextFormat = getContextFormat(RowObject)
-        RowObjectNew = newRowObject(ParameterNames,RowObject,VarDictionary,ContextFormat)
-        if checkRowObject(RowObject,Conditions,VarDictionary):
-           addRowObject(RowObjectNew,DestinationTableName)
+        RowObjectNew = newRowObject(ParameterNames, RowObject, VarDictionary, ContextFormat)
+        if checkRowObject(RowObject, Conditions, VarDictionary):
+           addRowObject(RowObjectNew, DestinationTableName)
            row_count += 1
     LOCAL_TABLE_CACHE[DestinationTableName]['header']['number_of_rows'] += row_count
 
@@ -2093,7 +1996,7 @@ def length(TableName):
 # Conditions contain a list of expressions in a special language.
 # Set Output to False to suppress output
 # Set File=FileName to redirect output to a file.
-def select(TableName,DestinationTableName=QUERY_BUFFER,ParameterNames=None,Conditions=None,Output=True,File=None):
+def select(TableName, DestinationTableName=QUERY_BUFFER, ParameterNames=None, Conditions=None, Output=True, File=None):
     """
     INPUT PARAMETERS: 
         TableName:            name of source table              (required)
@@ -2110,8 +2013,8 @@ def select(TableName,DestinationTableName=QUERY_BUFFER,ParameterNames=None,Condi
         either to standard output or to file (if specified)
     ---
     EXAMPLE OF USAGE:
-        select('sampletab',DestinationTableName='outtab',ParameterNames=(p1,p2),
-                Conditions=(('and',('>=','p1',1),('<',('*','p1','p2'),20))))
+        select('sampletab', DestinationTableName='outtab', ParameterNames=(p1, p2),
+                Conditions=(('and', ('>=', 'p1', 1), ('<', ('*', 'p1', 'p2'), 20))))
         Conditions means (p1>=1 and p1*p2<20)
     ---
     """
@@ -2124,18 +2027,18 @@ def select(TableName,DestinationTableName=QUERY_BUFFER,ParameterNames=None,Condi
     RowObjectDefault = getDefaultRowObject(TableName)
     VarDictionary = getVarDictionary(RowObjectDefault)
     ContextFormat = getContextFormat(RowObjectDefault)
-    RowObjectDefaultNew = newRowObject(ParameterNames,RowObjectDefault,VarDictionary,ContextFormat)
+    RowObjectDefaultNew = newRowObject(ParameterNames, RowObjectDefault, VarDictionary, ContextFormat)
     dropTable(DestinationTableName) # redundant
-    createTable(DestinationTableName,RowObjectDefaultNew)
-    selectInto(DestinationTableName,TableName,ParameterNames,Conditions)
+    createTable(DestinationTableName, RowObjectDefaultNew)
+    selectInto(DestinationTableName, TableName, ParameterNames, Conditions)
     if DestinationTableName!=QUERY_BUFFER:
-        if File: outputTable(DestinationTableName,File=File)
+        if File: outputTable(DestinationTableName, File=File)
     elif Output:
-        outputTable(DestinationTableName,File=File)
+        outputTable(DestinationTableName, File=File)
 
 # SORTING ===========================================================
 
-def arrangeTable(TableName,DestinationTableName=None,RowIDList=None):
+def arrangeTable(TableName, DestinationTableName=None, RowIDList=None):
     #print 'AT/'
     #print 'AT: RowIDList = '+str(RowIDList)
     # make a subset of table rows according to RowIDList
@@ -2151,20 +2054,20 @@ def arrangeTable(TableName,DestinationTableName=None,RowIDList=None):
         par_data = LOCAL_TABLE_CACHE[TableName]['data'][par_name]
         LOCAL_TABLE_CACHE[DestinationTableName]['data'][par_name] = [par_data[i] for i in RowIDList]
     
-def compareLESS(RowObject1,RowObject2,ParameterNames):
+def compareLESS(RowObject1, RowObject2, ParameterNames):
     #print 'CL/'
     # arg1 and arg2 are RowObjects
     # Compare them according to ParameterNames
     # Simple validity check:
     #if len(arg1) != len(arg2):
     #   raise Exception('Arguments have different lengths')
-    #RowObject1Subset = subsetOfRowObject(ParameterNames,RowObject1)
-    #RowObject2Subset = subsetOfRowObject(ParameterNames,RowObject2)
+    #RowObject1Subset = subsetOfRowObject(ParameterNames, RowObject1)
+    #RowObject2Subset = subsetOfRowObject(ParameterNames, RowObject2)
     #return RowObject1Subset < RowObject2Subset
     row1 = []
     row2 = []
     #n = len(RowObject1)
-    #for i in range(0,n):
+    #for i in range(0, n):
     #    par_name1 = RowObject1[i][0]
     #    if par_name1 in ParameterNames:
     #       par_value1 = RowObject1[i][1]
@@ -2181,31 +2084,31 @@ def compareLESS(RowObject1,RowObject2,ParameterNames):
     Flag = row1 < row2
     return Flag
 
-def quickSort(index,TableName,ParameterNames,Accending=True):
+def quickSort(index, TableName, ParameterNames, Accending=True):
     # ParameterNames: names of parameters which are
     #  taking part in the sorting
     if index == []:
        return []
     else:
        PivotID = index[0]
-       Pivot = getRowObject(PivotID,TableName)
+       Pivot = getRowObject(PivotID, TableName)
        lesser_index = []
        greater_index = [];
        for RowID in index[1:]:
-           RowObject = getRowObject(RowID,TableName)           
-           if compareLESS(RowObject,Pivot,ParameterNames): 
+           RowObject = getRowObject(RowID, TableName)
+           if compareLESS(RowObject, Pivot, ParameterNames):
               lesser_index += [RowID]
            else:
               greater_index += [RowID]
-       lesser = quickSort(lesser_index,TableName,ParameterNames,Accending)
-       greater = quickSort(greater_index,TableName,ParameterNames,Accending)
+       lesser = quickSort(lesser_index, TableName, ParameterNames, Accending)
+       greater = quickSort(greater_index, TableName, ParameterNames, Accending)
        if Accending:
           return lesser + [PivotID] + greater
        else:
           return greater + [PivotID] + lesser
 
 # Sorting must work well on the table itself!
-def sort(TableName,DestinationTableName=None,ParameterNames=None,Accending=True,Output=False,File=None):
+def sort(TableName, DestinationTableName=None, ParameterNames=None, Accending=True, Output=False, File=None):
     """
     INPUT PARAMETERS: 
         TableName:                name of source table          (required)
@@ -2222,22 +2125,22 @@ def sort(TableName,DestinationTableName=None,ParameterNames=None,Accending=True,
         The sorted table is saved in DestinationTableName (if specified).
     ---
     EXAMPLE OF USAGE:
-        sort('sampletab',ParameterNames=(p1,('+',p1,p2)))
+        sort('sampletab', ParameterNames=(p1, ('+', p1, p2)))
     ---
     """
     number_of_rows = LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows']
-    index = range(0,number_of_rows)
+    index = range(0, number_of_rows)
     if not DestinationTableName:
        DestinationTableName = TableName
     # if names are not provided use all parameters in sorting
     if not ParameterNames:
        ParameterNames = LOCAL_TABLE_CACHE[TableName]['header']['order']
-    elif type(ParameterNames) not in set([list,tuple]):
-       ParameterNames = [ParameterNames] # fix of stupid bug where ('p1',) != ('p1')
-    index_sorted = quickSort(index,TableName,ParameterNames,Accending)
-    arrangeTable(TableName,DestinationTableName,index_sorted)
+    elif type(ParameterNames) not in set([list, tuple]):
+       ParameterNames = [ParameterNames] # fix of stupid bug where ('p1', ) != ('p1')
+    index_sorted = quickSort(index, TableName, ParameterNames, Accending)
+    arrangeTable(TableName, DestinationTableName, index_sorted)
     if Output:
-       outputTable(DestinationTableName,File=File)
+       outputTable(DestinationTableName, File=File)
 
 # /SORTING ==========================================================
     
@@ -2257,7 +2160,7 @@ def sort(TableName,DestinationTableName=None,ParameterNames=None,Accending=True,
 #    than the following key is used: "__GLOBAL__"
 
 
-def group(TableName,DestinationTableName=QUERY_BUFFER,ParameterNames=None,GroupParameterNames=None,File=None,Output=True):
+def group(TableName, DestinationTableName=QUERY_BUFFER, ParameterNames=None, GroupParameterNames=None, File=None, Output=True):
     """
     INPUT PARAMETERS: 
         TableName:                name of source table          (required)
@@ -2273,12 +2176,12 @@ def group(TableName,DestinationTableName=QUERY_BUFFER,ParameterNames=None,GroupP
         none
     ---
     EXAMPLE OF USAGE:
-        group('sampletab',ParameterNames=('p1',('sum','p2')),GroupParameterNames=('p1'))
-        ... makes grouping by p1,p2. For each group it calculates sum of p2 values.
+        group('sampletab', ParameterNames=('p1', ('sum', 'p2')), GroupParameterNames=('p1'))
+        ... makes grouping by p1, p2. For each group it calculates sum of p2 values.
     ---
     """
     # Implements such functions as:
-    # count,sum,avg,min,max,ssq etc...
+    # count, sum, avg, min, max, ssq etc...
     # 1) ParameterNames can contain group functions
     # 2) GroupParameterNames can't contain group functions
     # 3) If ParameterNames contains parameters defined by LET directive,
@@ -2296,35 +2199,35 @@ def group(TableName,DestinationTableName=QUERY_BUFFER,ParameterNames=None,GroupP
     RowObjectDefault = getDefaultRowObject(TableName)
     VarDictionary = getVarDictionary(RowObjectDefault)
     ContextFormat = getContextFormat(RowObjectDefault)
-    RowObjectDefaultNew = newRowObject(ParameterNames,RowObjectDefault,VarDictionary,ContextFormat)
+    RowObjectDefaultNew = newRowObject(ParameterNames, RowObjectDefault, VarDictionary, ContextFormat)
     dropTable(DestinationTableName) # redundant
-    createTable(DestinationTableName,RowObjectDefaultNew)
+    createTable(DestinationTableName, RowObjectDefaultNew)
     # Loop through rows of source Table
     # On each iteration group functions update GROUP_INDEX (see description above)
     number_of_rows = LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows']   
     # STAGE 1: CREATE GROUPS
     print('LOOP:')
-    for RowID in range(0,number_of_rows):
+    for RowID in range(0, number_of_rows):
         print('--------------------------------')
         print('RowID='+str(RowID))
-        RowObject = getRowObject(RowID,TableName) # RowObject from source table
+        RowObject = getRowObject(RowID, TableName) # RowObject from source table
         VarDictionary = getVarDictionary(RowObject)
         print('VarDictionary='+str(VarDictionary))
         # This is a trick which makes evaluateExpression function
         #   not consider first expression as an operation
         GroupParameterNames_ = ['LIST'] + list(GroupParameterNames)
-        GroupIndexKey = evaluateExpression(GroupParameterNames_,VarDictionary)
+        GroupIndexKey = evaluateExpression(GroupParameterNames_, VarDictionary)
         # List is an unhashable type in Python!
         GroupIndexKey = tuple(GroupIndexKey)       
         initializeGroup(GroupIndexKey)
         print('GROUP_INDEX='+str(GROUP_INDEX))
         ContextFormat = getContextFormat(RowObject)
-        RowObjectNew = newRowObject(ParameterNames,RowObject,VarDictionary,ContextFormat,GroupIndexKey)
+        RowObjectNew = newRowObject(ParameterNames, RowObject, VarDictionary, ContextFormat, GroupIndexKey)
         RowIDGroup = GROUP_INDEX[GroupIndexKey]['ROWID']
-        setRowObject(RowIDGroup,RowObjectNew,DestinationTableName)
+        setRowObject(RowIDGroup, RowObjectNew, DestinationTableName)
     # Output result if required
     if Output and DestinationTableName==QUERY_BUFFER:
-       outputTable(DestinationTableName,File=File)
+       outputTable(DestinationTableName, File=File)
 
 # /GROUPING =========================================================
 
@@ -2341,7 +2244,7 @@ REGEX_FLOAT_F_FIXCOL = lambda n: '[\+\-\.\d]{%d}' % n
 REGEX_FLOAT_E_FIXCOL = lambda n: '[\+\-\.\deEfF]{%d}' % n
 
 # Extract sub-columns from string column
-def extractColumns(TableName,SourceParameterName,ParameterFormats,ParameterNames=None,FixCol=False):
+def extractColumns(TableName, SourceParameterName, ParameterFormats, ParameterNames=None, FixCol=False):
     """
     INPUT PARAMETERS: 
         TableName:             name of source table              (required)
@@ -2358,35 +2261,35 @@ def extractColumns(TableName,SourceParameterName,ParameterFormats,ParameterNames
         to be done by the user.
     ---
     EXAMPLE OF USAGE:
-        extractColumns('sampletab',SourceParameterName='p5',
-                        ParameterFormats=('%d','%d','%d'),
-                        ParameterNames=('p5_1','p5_2','p5_3'))
+        extractColumns('sampletab', SourceParameterName='p5',
+                        ParameterFormats=('%d', '%d', '%d'),
+                        ParameterNames=('p5_1', 'p5_2', 'p5_3'))
         This example extracts three integer parameters from
-        a source column 'p5' and puts results in ('p5_1','p5_2','p5_3').
+        a source column 'p5' and puts results in ('p5_1', 'p5_2', 'p5_3').
     ---
     """
     # ParameterNames = just the names without expressions
     # ParFormats contains python formats for par extraction
-    # Example: ParameterNames=('v1','v2','v3')
-    #          ParameterFormats=('%1s','%1s','%1s')
+    # Example: ParameterNames=('v1', 'v2', 'v3')
+    #          ParameterFormats=('%1s', '%1s', '%1s')
     # By default the format of parameters is column-fixed
-    if type(LOCAL_TABLE_CACHE[TableName]['header']['default'][SourceParameterName]) not in set([str,unicode]):
+    if type(LOCAL_TABLE_CACHE[TableName]['header']['default'][SourceParameterName]) not in set([str, unicode]):
        raise Exception('Source parameter must be a string')
     i=-1
-    # bug when (a,) != (a)
-    if ParameterNames and type(ParameterNames) not in set([list,tuple]):
+    # bug when (a, ) != (a)
+    if ParameterNames and type(ParameterNames) not in set([list, tuple]):
        ParameterNames = [ParameterNames]
-    if ParameterFormats and type(ParameterFormats) not in set([list,tuple]):
+    if ParameterFormats and type(ParameterFormats) not in set([list, tuple]):
        ParameterFormats = [ParameterFormats]
     # if ParameterNames is empty, fill it with #1-2-3-...
     if not ParameterNames:
        ParameterNames = []
-       # using naming convension #i, i=0,1,2,3...
+       # using naming convension #i, i=0, 1, 2, 3...
        for par_format in ParameterFormats:
            while True:
                  i+=1
                  par_name = '#%d' % i
-                 fmt = LOCAL_TABLE_CACHE[TableName]['header']['format'].get(par_name,None)
+                 fmt = LOCAL_TABLE_CACHE[TableName]['header']['format'].get(par_name, None)
                  if not fmt: break
            ParameterNames.append(par_name)
     # check if ParameterNames are valid
@@ -2409,7 +2312,7 @@ def extractColumns(TableName,SourceParameterName,ParameterFormats,ParameterNames
     for par_format in ParameterFormats:
         par_name = ParameterNames[i]
         regex = FORMAT_PYTHON_REGEX
-        (lng,trail,lngpnt,ty) = re.search(regex,par_format).groups()
+        (lng, trail, lngpnt, ty) = re.search(regex, par_format).groups()
         ty = ty.lower()
         if ty == 'd':
            par_type = int
@@ -2446,7 +2349,7 @@ def extractColumns(TableName,SourceParameterName,ParameterFormats,ParameterNames
     # loop through values of SourceParameter
     for SourceParameterString in LOCAL_TABLE_CACHE[TableName]['data'][SourceParameterName]:
         try:
-           ExtractedValues = list(re.search(format_regex,SourceParameterString).groups())
+           ExtractedValues = list(re.search(format_regex, SourceParameterString).groups())
         except:
            raise Exception('Error with line \"%s\"' % SourceParameterString)
         i=0
@@ -2463,7 +2366,7 @@ def extractColumns(TableName,SourceParameterName,ParameterFormats,ParameterNames
        raise Exception('Error while extracting parameters: check your regexp')
 
 # Split string columns into sub-columns with given names
-def splitColumn(TableName,SourceParameterName,ParameterNames,Splitter):
+def splitColumn(TableName, SourceParameterName, ParameterNames, Splitter):
     pass
 
 # /EXTRACTING =======================================================
@@ -2515,22 +2418,22 @@ def mergeParlist(*arg):
 #        ON HITRANONLINE WEBSITE (http://hitran.org).
 # ======================================================
 
-VOIGT_PROFILE_TEMPLATE = ['gamma_%s','n_%s','delta_%s','deltap_%s']
+VOIGT_PROFILE_TEMPLATE = ['gamma_%s', 'n_%s', 'delta_%s', 'deltap_%s']
 
 SDVOIGT_PROFILE_TEMPLATE = [
-    'gamma_SDV_0_%s_%d','n_SDV_%s_%d', # HWHM AND ITS T-DEPENDENCE
-    'gamma_SDV_2_%s_%d','n_gamma_SDV_2_%s_%d', # SPEED-DEPENDENCE OF HWHM AND ITS T-DEPENDENCE
-    'delta_SDV_%s_%d','deltap_SDV_%s_%d', # SHIFT AND ITS T-DEPENDENCE
+    'gamma_SDV_0_%s_%d', 'n_SDV_%s_%d', # HWHM AND ITS T-DEPENDENCE
+    'gamma_SDV_2_%s_%d', 'n_gamma_SDV_2_%s_%d', # SPEED-DEPENDENCE OF HWHM AND ITS T-DEPENDENCE
+    'delta_SDV_%s_%d', 'deltap_SDV_%s_%d', # SHIFT AND ITS T-DEPENDENCE
     'SD_%s' # UNITLESS SDV PARAMETER
     ]
 
 HT_PROFILE_TEMPLATE = [
-    'gamma_HT_0_%s_%d','n_HT_%s_%d', # HWHM AND ITS T-DEPENDENCE
-    'gamma_HT_2_%s_%d','n_gamma_HT_2_%s_%d', # SPEED-DEPENDENCE OF HWHM AND ITS T-DEPENDENCE
-    'delta_HT_%s_%d','deltap_HT_%s_%d', # SHIFT AND ITS T-DEPENDENCE
+    'gamma_HT_0_%s_%d', 'n_HT_%s_%d', # HWHM AND ITS T-DEPENDENCE
+    'gamma_HT_2_%s_%d', 'n_gamma_HT_2_%s_%d', # SPEED-DEPENDENCE OF HWHM AND ITS T-DEPENDENCE
+    'delta_HT_%s_%d', 'deltap_HT_%s_%d', # SHIFT AND ITS T-DEPENDENCE
     ]
 
-def apply_env(template,broadener,Tref):
+def apply_env(template, broadener, Tref):
     args = []
     if '%s' in template:
         args.append(broadener)
@@ -2538,7 +2441,7 @@ def apply_env(template,broadener,Tref):
         args.append(Tref)
     return template%tuple(args)
 
-def generate_parlist(profile,broadener,Tref):
+def generate_parlist(profile, broadener, Tref):
     PROFILE_MAP = {
         'voigt': VOIGT_PROFILE_TEMPLATE,
         'vp': VOIGT_PROFILE_TEMPLATE,
@@ -2547,98 +2450,98 @@ def generate_parlist(profile,broadener,Tref):
         'ht': HT_PROFILE_TEMPLATE,
         'htp': HT_PROFILE_TEMPLATE,
     }
-    return [apply_env(template,broadener,Tref) \
+    return [apply_env(template, broadener, Tref) \
         for template in PROFILE_MAP[profile.lower()]] 
     
-# generate_parlist('Voigt','air',296)  =>   gamma_air,
+# generate_parlist('Voigt', 'air', 296)  =>   gamma_air,
     
 # ====================================================================        
 # PARLISTS FOR EACH BROADENER EXPLICITLY (FOR BACKWARDS COMPATIBILITY)
 # ====================================================================        
 
 # Define parameter groups to simplify the usage of fetch_
-PARLIST_DOTPAR = ['par_line',]
-PARLIST_ID = ['trans_id',]
-PARLIST_STANDARD = ['molec_id','local_iso_id','nu','sw','a','elower','gamma_air',
-                    'delta_air','gamma_self','n_air','n_self','gp','gpp']
-PARLIST_LABELS = ['statep','statepp']
-#PARLIST_LINEMIXING = ['y_air','y_self']
+PARLIST_DOTPAR = ['par_line', ]
+PARLIST_ID = ['trans_id', ]
+PARLIST_STANDARD = ['molec_id', 'local_iso_id', 'nu', 'sw', 'a', 'elower', 'gamma_air',
+                    'delta_air', 'gamma_self', 'n_air', 'n_self', 'gp', 'gpp']
+PARLIST_LABELS = ['statep', 'statepp']
+#PARLIST_LINEMIXING = ['y_air', 'y_self']
 
-PARLIST_VOIGT_AIR = ['gamma_air','delta_air','deltap_air','n_air']
-PARLIST_VOIGT_SELF = ['gamma_self','delta_self','deltap_self','n_self']
-PARLIST_VOIGT_H2 = ['gamma_H2','delta_H2','deltap_H2','n_H2']
-PARLIST_VOIGT_CO2 = ['gamma_CO2','delta_CO2','n_CO2']
-PARLIST_VOIGT_HE = ['gamma_He','delta_He','n_He']
-PARLIST_VOIGT_H2O = ['gamma_H2O','n_H2O']
+PARLIST_VOIGT_AIR = ['gamma_air', 'delta_air', 'deltap_air', 'n_air']
+PARLIST_VOIGT_SELF = ['gamma_self', 'delta_self', 'deltap_self', 'n_self']
+PARLIST_VOIGT_H2 = ['gamma_H2', 'delta_H2', 'deltap_H2', 'n_H2']
+PARLIST_VOIGT_CO2 = ['gamma_CO2', 'delta_CO2', 'n_CO2']
+PARLIST_VOIGT_HE = ['gamma_He', 'delta_He', 'n_He']
+PARLIST_VOIGT_H2O = ['gamma_H2O', 'n_H2O']
 PARLIST_VOIGT_LINEMIXING_AIR = ['y_air']
 PARLIST_VOIGT_LINEMIXING_SELF = ['y_self']
 PARLIST_VOIGT_LINEMIXING_ALL = mergeParlist(PARLIST_VOIGT_LINEMIXING_AIR,
                                             PARLIST_VOIGT_LINEMIXING_SELF)
-PARLIST_VOIGT_ALL = mergeParlist(PARLIST_VOIGT_AIR,PARLIST_VOIGT_SELF,
-                                 PARLIST_VOIGT_H2,PARLIST_VOIGT_CO2,
-                                 PARLIST_VOIGT_HE,PARLIST_VOIGT_H2O,
+PARLIST_VOIGT_ALL = mergeParlist(PARLIST_VOIGT_AIR, PARLIST_VOIGT_SELF,
+                                 PARLIST_VOIGT_H2, PARLIST_VOIGT_CO2,
+                                 PARLIST_VOIGT_HE, PARLIST_VOIGT_H2O,
                                  PARLIST_VOIGT_LINEMIXING_ALL)
 
-#PARLIST_SDVOIGT_AIR = ['gamma_air','delta_air','deltap_air','n_air','SD_air']
-#PARLIST_SDVOIGT_AIR = ['gamma_SDV_0_air_296','n_SDV_air_296',
-#                       'gamma_SDV_2_air_296','n_gamma_SDV_2_air_296', # n_SDV_2_air_296 ?
+#PARLIST_SDVOIGT_AIR = ['gamma_air', 'delta_air', 'deltap_air', 'n_air', 'SD_air']
+#PARLIST_SDVOIGT_AIR = ['gamma_SDV_0_air_296', 'n_SDV_air_296',
+#                       'gamma_SDV_2_air_296', 'n_gamma_SDV_2_air_296', # n_SDV_2_air_296 ?
 PARLIST_SDVOIGT_AIR = ['gamma_SDV_0_air_296',  # don't include temperature exponents while they are absent in the database
                        'gamma_SDV_2_air_296',  # don't include temperature exponents while they are absent in the database
-                       'delta_SDV_0_air_296','deltap_SDV_air_296','SD_air']
-#PARLIST_SDVOIGT_SELF = ['gamma_self','delta_self','deltap_self','n_self','SD_self']
-#PARLIST_SDVOIGT_SELF = ['gamma_SDV_0_self_296','n_SDV_self_296',
-#                       'gamma_SDV_2_self_296','n_gamma_SDV_2_self_296', # n_SDV_2_self_296 ?
+                       'delta_SDV_0_air_296', 'deltap_SDV_air_296', 'SD_air']
+#PARLIST_SDVOIGT_SELF = ['gamma_self', 'delta_self', 'deltap_self', 'n_self', 'SD_self']
+#PARLIST_SDVOIGT_SELF = ['gamma_SDV_0_self_296', 'n_SDV_self_296',
+#                       'gamma_SDV_2_self_296', 'n_gamma_SDV_2_self_296', # n_SDV_2_self_296 ?
 PARLIST_SDVOIGT_SELF = ['gamma_SDV_0_self_296', # don't include temperature exponents while they are absent in the database
                        'gamma_SDV_2_self_296',  # don't include temperature exponents while they are absent in the database
-                       'delta_SDV_0_self_296','deltap_SDV_self_296','SD_self']
+                       'delta_SDV_0_self_296', 'deltap_SDV_self_296', 'SD_self']
 PARLIST_SDVOIGT_H2 = []
 PARLIST_SDVOIGT_CO2 = []
 PARLIST_SDVOIGT_HE = []
-#PARLIST_SDVOIGT_LINEMIXING_AIR = ['Y_SDV_air_296','n_Y_SDV_air_296']
+#PARLIST_SDVOIGT_LINEMIXING_AIR = ['Y_SDV_air_296', 'n_Y_SDV_air_296']
 PARLIST_SDVOIGT_LINEMIXING_AIR = ['Y_SDV_air_296'] # don't include temperature exponents while they are absent in the database
-#PARLIST_SDVOIGT_LINEMIXING_SELF = ['Y_SDV_self_296','n_Y_SDV_self_296']
+#PARLIST_SDVOIGT_LINEMIXING_SELF = ['Y_SDV_self_296', 'n_Y_SDV_self_296']
 PARLIST_SDVOIGT_LINEMIXING_SELF = ['Y_SDV_self_296'] # don't include temperature exponents while they are absent in the database
 PARLIST_SDVOIGT_LINEMIXING_ALL = mergeParlist(PARLIST_SDVOIGT_LINEMIXING_AIR,
                                               PARLIST_SDVOIGT_LINEMIXING_SELF)
-PARLIST_SDVOIGT_ALL = mergeParlist(PARLIST_SDVOIGT_AIR,PARLIST_SDVOIGT_SELF,
-                                   PARLIST_SDVOIGT_H2,PARLIST_SDVOIGT_CO2,
-                                   PARLIST_SDVOIGT_HE,PARLIST_SDVOIGT_LINEMIXING_ALL)
+PARLIST_SDVOIGT_ALL = mergeParlist(PARLIST_SDVOIGT_AIR, PARLIST_SDVOIGT_SELF,
+                                   PARLIST_SDVOIGT_H2, PARLIST_SDVOIGT_CO2,
+                                   PARLIST_SDVOIGT_HE, PARLIST_SDVOIGT_LINEMIXING_ALL)
 
-PARLIST_GALATRY_AIR = ['gamma_air','delta_air','deltap_air','n_air','beta_g_air']
-PARLIST_GALATRY_SELF = ['gamma_self','delta_self','deltap_self','n_self','beta_g_self']
+PARLIST_GALATRY_AIR = ['gamma_air', 'delta_air', 'deltap_air', 'n_air', 'beta_g_air']
+PARLIST_GALATRY_SELF = ['gamma_self', 'delta_self', 'deltap_self', 'n_self', 'beta_g_self']
 PARLIST_GALATRY_H2 = []
 PARLIST_GALATRY_CO2 = []
 PARLIST_GALATRY_HE = []
-PARLIST_GALATRY_ALL = mergeParlist(PARLIST_GALATRY_AIR,PARLIST_GALATRY_SELF,
-                                   PARLIST_GALATRY_H2,PARLIST_GALATRY_CO2,
+PARLIST_GALATRY_ALL = mergeParlist(PARLIST_GALATRY_AIR, PARLIST_GALATRY_SELF,
+                                   PARLIST_GALATRY_H2, PARLIST_GALATRY_CO2,
                                    PARLIST_GALATRY_HE)
 
-PARLIST_HT_SELF = ['gamma_HT_0_self_50','n_HT_self_50','gamma_HT_2_self_50',
-                   'delta_HT_0_self_50','deltap_HT_self_50','delta_HT_2_self_50',
-                   'gamma_HT_0_self_150','n_HT_self_150','gamma_HT_2_self_150',
-                   'delta_HT_0_self_150','deltap_HT_self_150','delta_HT_2_self_150',
-                   'gamma_HT_0_self_296','n_HT_self_296','gamma_HT_2_self_296',
-                   'delta_HT_0_self_296','deltap_HT_self_296','delta_HT_2_self_296',
-                   'gamma_HT_0_self_700','n_HT_self_700','gamma_HT_2_self_700',
-                   'delta_HT_0_self_700','deltap_HT_self_700','delta_HT_2_self_700',
-                   'nu_HT_self','kappa_HT_self','eta_HT_self','Y_HT_self_296']
-#PARLIST_HT_AIR = ['gamma_HT_0_air_50','n_HT_air_50','gamma_HT_2_air_50',
-#                  'delta_HT_0_air_50','deltap_HT_air_50','delta_HT_2_air_50',
-#                  'gamma_HT_0_air_150','n_HT_air_150','gamma_HT_2_air_150',
-#                  'delta_HT_0_air_150','deltap_HT_air_150','delta_HT_2_air_150',
-#                  'gamma_HT_0_air_296','n_HT_air_296','gamma_HT_2_air_296',
-#                  'delta_HT_0_air_296','deltap_HT_air_296','delta_HT_2_air_296',
-#                  'gamma_HT_0_air_700','n_HT_air_700','gamma_HT_2_air_700',
-#                  'delta_HT_0_air_700','deltap_HT_air_700','delta_HT_2_air_700',
-#                  'nu_HT_air','kappa_HT_air','eta_HT_air']
-PARLIST_HT_AIR = ['gamma_HT_0_air_296','n_HT_air_296','gamma_HT_2_air_296',
-                  'delta_HT_0_air_296','deltap_HT_air_296','delta_HT_2_air_296',
-                  'nu_HT_air','kappa_HT_air','eta_HT_air','Y_HT_air_296']
-PARLIST_HT_ALL = mergeParlist(PARLIST_HT_SELF,PARLIST_HT_AIR)
+PARLIST_HT_SELF = ['gamma_HT_0_self_50', 'n_HT_self_50', 'gamma_HT_2_self_50',
+                   'delta_HT_0_self_50', 'deltap_HT_self_50', 'delta_HT_2_self_50',
+                   'gamma_HT_0_self_150', 'n_HT_self_150', 'gamma_HT_2_self_150',
+                   'delta_HT_0_self_150', 'deltap_HT_self_150', 'delta_HT_2_self_150',
+                   'gamma_HT_0_self_296', 'n_HT_self_296', 'gamma_HT_2_self_296',
+                   'delta_HT_0_self_296', 'deltap_HT_self_296', 'delta_HT_2_self_296',
+                   'gamma_HT_0_self_700', 'n_HT_self_700', 'gamma_HT_2_self_700',
+                   'delta_HT_0_self_700', 'deltap_HT_self_700', 'delta_HT_2_self_700',
+                   'nu_HT_self', 'kappa_HT_self', 'eta_HT_self', 'Y_HT_self_296']
+#PARLIST_HT_AIR = ['gamma_HT_0_air_50', 'n_HT_air_50', 'gamma_HT_2_air_50',
+#                  'delta_HT_0_air_50', 'deltap_HT_air_50', 'delta_HT_2_air_50',
+#                  'gamma_HT_0_air_150', 'n_HT_air_150', 'gamma_HT_2_air_150',
+#                  'delta_HT_0_air_150', 'deltap_HT_air_150', 'delta_HT_2_air_150',
+#                  'gamma_HT_0_air_296', 'n_HT_air_296', 'gamma_HT_2_air_296',
+#                  'delta_HT_0_air_296', 'deltap_HT_air_296', 'delta_HT_2_air_296',
+#                  'gamma_HT_0_air_700', 'n_HT_air_700', 'gamma_HT_2_air_700',
+#                  'delta_HT_0_air_700', 'deltap_HT_air_700', 'delta_HT_2_air_700',
+#                  'nu_HT_air', 'kappa_HT_air', 'eta_HT_air']
+PARLIST_HT_AIR = ['gamma_HT_0_air_296', 'n_HT_air_296', 'gamma_HT_2_air_296',
+                  'delta_HT_0_air_296', 'deltap_HT_air_296', 'delta_HT_2_air_296',
+                  'nu_HT_air', 'kappa_HT_air', 'eta_HT_air', 'Y_HT_air_296']
+PARLIST_HT_ALL = mergeParlist(PARLIST_HT_SELF, PARLIST_HT_AIR)
                                    
-PARLIST_ALL = mergeParlist(PARLIST_ID,PARLIST_DOTPAR,PARLIST_STANDARD,
-                           PARLIST_LABELS,PARLIST_VOIGT_ALL,
-                           PARLIST_SDVOIGT_ALL,PARLIST_GALATRY_ALL,
+PARLIST_ALL = mergeParlist(PARLIST_ID, PARLIST_DOTPAR, PARLIST_STANDARD,
+                           PARLIST_LABELS, PARLIST_VOIGT_ALL,
+                           PARLIST_SDVOIGT_ALL, PARLIST_GALATRY_ALL,
                            PARLIST_HT_ALL)
 
 # ====================================================================        
@@ -2682,7 +2585,7 @@ PARAMETER_GROUPS = {
   'all' : PARLIST_ALL
 }
 
-def prepareParlist(pargroups=[],params=[],dotpar=True):
+def prepareParlist(pargroups=[], params=[], dotpar=True):
     # Apply defaults
     parlist_default = []
     if dotpar:
@@ -2716,9 +2619,9 @@ def prepareParlist(pargroups=[],params=[],dotpar=True):
     return result
 
 def prepareHeader(parlist):
-    HEADER = {'table_name':'','number_of_rows':-1,'format':{},
-              'default':{},'table_type':'column-fixed',
-              'size_in_bytes':-1,'order':[],'description':{}}
+    HEADER = {'table_name':'', 'number_of_rows':-1, 'format':{},
+              'default':{}, 'table_type':'column-fixed',
+              'size_in_bytes':-1, 'order':[], 'description':{}}
     
     # Add column-fixed 160-character part, if specified in parlist.
     if 'par_line' in set(parlist):
@@ -2732,7 +2635,7 @@ def prepareHeader(parlist):
     plist = [v for v in parlist if v!='par_line']
     HEADER['extra'] = []
     HEADER['extra_format'] = {}
-    HEADER['extra_separator'] = ','
+    HEADER['extra_separator'] = ', '
     for param in plist:
         param = param.lower()
         HEADER['extra'].append(param)
@@ -2740,15 +2643,15 @@ def prepareHeader(parlist):
         
     return HEADER
         
-def queryHITRAN(TableName,iso_id_list,numin,numax,pargroups=[],params=[],dotpar=True,head=False):
-    ParameterList = prepareParlist(pargroups=pargroups,params=params,dotpar=dotpar)
+def queryHITRAN(TableName, iso_id_list, numin, numax, pargroups=[], params=[], dotpar=True, head=False):
+    ParameterList = prepareParlist(pargroups=pargroups, params=params, dotpar=dotpar)
     TableHeader = prepareHeader(ParameterList)
     TableHeader['table_name'] = TableName
     DataFileName = VARIABLES['BACKEND_DATABASE_NAME'] + '/' + TableName + '.data'
     HeaderFileName = VARIABLES['BACKEND_DATABASE_NAME'] + '/' + TableName + '.header'
     # create URL
     iso_id_list_str = [str(iso_id) for iso_id in iso_id_list]
-    iso_id_list_str = ','.join(iso_id_list_str)
+    iso_id_list_str = ', '.join(iso_id_list_str)
     print('\nData is fetched from %s\n'%VARIABLES['GLOBAL_HOST'])
     if pargroups or params: # custom par search
         url = VARIABLES['GLOBAL_HOST'] + '/lbl/api?' + \
@@ -2757,7 +2660,7 @@ def queryHITRAN(TableName,iso_id_list,numin,numax,pargroups=[],params=[],dotpar=
         'numax=' + str(numax) + '&' + \
         'head=' + str(head) + '&' + \
         'fixwidth=0&sep=[comma]&' +\
-        'request_params=' + ','.join(ParameterList)
+        'request_params=' + ', '.join(ParameterList)
     else: # old-fashioned .par search
         url = VARIABLES['GLOBAL_HOST'] + '/lbl/api?' + \
         'iso_ids_list=' + iso_id_list_str + '&' + \
@@ -2780,14 +2683,14 @@ def queryHITRAN(TableName,iso_id_list,numin,numax,pargroups=[],params=[],dotpar=
         raise Exception('Cannot connect to %s. Try again or edit GLOBAL_HOST variable.' % GLOBAL_HOST)
     CHUNK = 64 * 1024
     print('BEGIN DOWNLOAD: '+TableName)
-    with open_(DataFileName,'w') as fp:
+    with open_(DataFileName, 'w') as fp:
        while True:
           chunk = req.read(CHUNK)
           if not chunk: break
           fp.write(chunk.decode('utf-8'))
-          print('  %d bytes written to %s' % (CHUNK,DataFileName))
-    with open(HeaderFileName,'w') as fp:       
-       fp.write(json.dumps(TableHeader,indent=2))
+          print('  %d bytes written to %s' % (CHUNK, DataFileName))
+    with open(HeaderFileName, 'w') as fp:
+       fp.write(json.dumps(TableHeader, indent=2))
        print('Header written to %s' % HeaderFileName)
     print('END DOWNLOAD')
     # Set comment
@@ -2798,13 +2701,13 @@ def queryHITRAN(TableName,iso_id_list,numin,numax,pargroups=[],params=[],dotpar=
 def saveHeader(TableName):
     ParameterList = prepareParlist(dotpar=True)    
     TableHeader = prepareHeader(ParameterList)
-    with open(TableName+'.header','w') as fp:
-       fp.write(json.dumps(TableHeader,indent=2))
+    with open(TableName+'.header', 'w') as fp:
+       fp.write(json.dumps(TableHeader, indent=2))
     
 # ---------- DATABASE FRONTEND END -------------
 
 # simple implementation of getting a line list from a remote server
-def getLinelist(local_name,query,api_key):
+def getLinelist(local_name, query, api_key):
     return makeQuery(local_name)
 
 # -------------------------------------------------------------------
@@ -2817,8 +2720,8 @@ def getLinelist(local_name,query,api_key):
 
 # ---------------- FILTER ---------------------------------------------
 
-def filter(TableName,Conditions):
-    select(TableName=TableName,Conditions=Conditions,Output=False)
+def filter(TableName, Conditions):
+    select(TableName=TableName, Conditions=Conditions, Output=False)
 
 # ---------------------- ISO.PY ---------------------------------------
 
@@ -2995,10 +2898,10 @@ ISO = {
 
 # calculate ISO_ID instead of repeating the same information twice
 ISO_ID = {}
-for mol_id,iso_id in ISO:
-    ln = ISO[(mol_id,iso_id)]
+for mol_id, iso_id in ISO:
+    ln = ISO[(mol_id, iso_id)]
     glob_iso_id = ln[0]
-    ln_ = [mol_id,iso_id]+ln[1:]
+    ln_ = [mol_id, iso_id]+ln[1:]
     ISO_ID[glob_iso_id] = ln_
 
 def print_iso():
@@ -3009,7 +2912,7 @@ def print_iso():
         ma = ISO[i][ISO_INDEX['mass']]
         ab = ab if ab else -1
         ma = ma if ma else -1
-        print('%4i %4i     : %5i %25s %10f %10f %15s' % (i[0],i[1],ISO[i][ISO_INDEX['id']],ISO[i][ISO_INDEX['iso_name']],ab,ma,ISO[i][ISO_INDEX['mol_name']]))
+        print('%4i %4i     : %5i %25s %10f %10f %15s' % (i[0], i[1], ISO[i][ISO_INDEX['id']], ISO[i][ISO_INDEX['iso_name']], ab, ma, ISO[i][ISO_INDEX['mol_name']]))
 
 def print_iso_id():
     print('The dictionary \"ISO_ID\" contains information on \"global\" IDs of isotopologues in HITRAN\n')
@@ -3019,7 +2922,7 @@ def print_iso_id():
         ma = ISO_ID[i][ISO_ID_INDEX['mass']]
         ab = ab if ab else -1
         ma = ma if ma else -1
-        print('%5i     :   %4i %4i   %25s %15.10f %10f %15s' % (i,ISO_ID[i][ISO_ID_INDEX['M']],ISO_ID[i][ISO_ID_INDEX['I']],ISO_ID[i][ISO_ID_INDEX['iso_name']],ab,ma,ISO_ID[i][ISO_ID_INDEX['mol_name']]))
+        print('%5i     :   %4i %4i   %25s %15.10f %10f %15s' % (i, ISO_ID[i][ISO_ID_INDEX['M']], ISO_ID[i][ISO_ID_INDEX['I']], ISO_ID[i][ISO_ID_INDEX['iso_name']], ab, ma, ISO_ID[i][ISO_ID_INDEX['mol_name']]))
 
 profiles = 'profiles'
 def print_profiles():
@@ -3611,7 +3514,7 @@ To download the data, simply call the function "fetch".
 This will establish a connection with the main server and get the data using
 the parameters listed above:
 
->>> fetch('H2O',1,1,3400,4100)
+>>> fetch('H2O', 1, 1, 3400, 4100)
 BEGIN DOWNLOAD: H2O
   65536 bytes written to data/H2O.data
   65536 bytes written to data/H2O.data
@@ -3710,7 +3613,7 @@ on control parameters can be obtained via getHelp(select) statement.
 Suppose that we need a lines from a table within some wavenumber range. 
 That's what filtering is for. Let's apply a simple range filter on a table.
 
->>> select('H2O',Conditions=('between','nu',4000,4100))
+>>> select('H2O', Conditions=('between', 'nu', 4000, 4100))
 MI          nu         S         A gair gsel        E_nair    dair     
  11 4000.188800 1.513E-25 1.105E-02.03340.298 1581.33570.51-.013910 ...
  11 4000.204070 3.482E-24 8.479E-03.08600.454  586.47920.61-.007000 ...
@@ -3724,7 +3627,7 @@ The condition is taken as an input parameter to API function "select".
 To specify a subset of columns to display, use another control parameter - 
 ParameterNames:
 
->>> select('H2O',ParameterNames=('nu','sw'),Conditions=('between','nu',4000,4100))
+>>> select('H2O', ParameterNames=('nu', 'sw'), Conditions=('between', 'nu', 4000, 4100))
 
 The usage of ParameterNames is outlined below in the section "Specifying a list 
 of parameters". So far it worth mentioning that this parameter is a part 
@@ -3741,52 +3644,52 @@ with more complex conditions.
 Let's analyze the last example of filtering. Condition input variable is
 as follows:
 
-                    ('between','nu',4000,4100)
+                    ('between', 'nu', 4000, 4100)
 
 Thus, this is a python list (or tuple), containing logical expressions
 defined under column names of the table. For example, 'nu' is a name of 
 the column in 'H2O' table, and this column contains a transition wavenumber.
 The structure of a simple condition is as follows:
 
-                    (OPERATION,ARG1,ARG2,...)
+                    (OPERATION, ARG1, ARG2, ...)
                     
 Where OPERATION must be in a set of predefined operations (see below),
-and ARG1,ARG2 etc. are the arguments for this operation.
+and ARG1, ARG2 etc. are the arguments for this operation.
 Conditions can be nested, i.e. ARG can itself be a condition (see examples).
 The following operations are available in select (case insensitive):
 
 
 DESCRIPTION                   LITERAL                     EXAMPLE
 ---------------------------------------------------------------------------------
-Range:               'RANGE','BETWEEN':         ('BETWEEN','nu',0,1000)
-Subset:              'IN','SUBSET':             ('IN','local_iso_id',[1,2,3,4])
-And:                 '&','&&','AND':            ('AND',('<','nu',1000),('>','nu',10))
-Or:                  '|','||','OR':             ('OR',('>','nu',1000),('<','nu',10))
-Not:                 '!','NOT':                 ('NOT',('IN','local_iso_id',[1,2,3]))
-Less than:           '<','LESS','LT':                 ('<','nu',1000)
-More than:           '>','MORE','MT':                 ('>','sw',1.0e-20)
-Less or equal than:  '<=','LESSOREQUAL','LTE':        ('<=','local_iso_id',10)
-More or equal than   '>=','MOREOREQUAL','MTE':        ('>=','sw',1e-20)
-Equal:               '=','==','EQ','EQUAL','EQUALS':  ('<=','local_iso_id',10)
-Not equal:           '!=','<>','~=','NE','NOTEQUAL':  ('!=','local_iso_id',1)
-Summation:           '+','SUM':                 ('+','v1','v2','v3')
-Difference:          '-','DIFF':                ('-','nu','elow')
-Multiplication:      '*','MUL':                 ('*','sw',0.98)
-Division:            '/','DIV':                 ('/','A',2)
-Cast to string:      'STR','STRING':            ('STR','some_string')
-Cast to Python list  'LIST':                    ('LIST',[1,2,3,4,5])
-Match regexp         'MATCH','LIKE':            ('MATCH','\w+','some string')
-Search single match: 'SEARCH':                  ('SEARCH','\d \d \d','1 2 3 4')
-Search all matches:  'FINDALL':                 ('FINDALL','\d','1 2 3 4 5')
-Count within group:  'COUNT' :                  ('COUNT','local_iso_id')
+Range:               'RANGE', 'BETWEEN':         ('BETWEEN', 'nu', 0, 1000)
+Subset:              'IN', 'SUBSET':             ('IN', 'local_iso_id', [1, 2, 3, 4])
+And:                 '&', '&&', 'AND':            ('AND', ('<', 'nu', 1000), ('>', 'nu', 10))
+Or:                  '|', '||', 'OR':             ('OR', ('>', 'nu', 1000), ('<', 'nu', 10))
+Not:                 '!', 'NOT':                 ('NOT', ('IN', 'local_iso_id', [1, 2, 3]))
+Less than:           '<', 'LESS', 'LT':                 ('<', 'nu', 1000)
+More than:           '>', 'MORE', 'MT':                 ('>', 'sw', 1.0e-20)
+Less or equal than:  '<=', 'LESSOREQUAL', 'LTE':        ('<=', 'local_iso_id', 10)
+More or equal than   '>=', 'MOREOREQUAL', 'MTE':        ('>=', 'sw', 1e-20)
+Equal:               '=', '==', 'EQ', 'EQUAL', 'EQUALS':  ('<=', 'local_iso_id', 10)
+Not equal:           '!=', '<>', '~=', 'NE', 'NOTEQUAL':  ('!=', 'local_iso_id', 1)
+Summation:           '+', 'SUM':                 ('+', 'v1', 'v2', 'v3')
+Difference:          '-', 'DIFF':                ('-', 'nu', 'elow')
+Multiplication:      '*', 'MUL':                 ('*', 'sw', 0.98)
+Division:            '/', 'DIV':                 ('/', 'A', 2)
+Cast to string:      'STR', 'STRING':            ('STR', 'some_string')
+Cast to Python list  'LIST':                    ('LIST', [1, 2, 3, 4, 5])
+Match regexp         'MATCH', 'LIKE':            ('MATCH', '\w+', 'some string')
+Search single match: 'SEARCH':                  ('SEARCH', '\d \d \d', '1 2 3 4')
+Search all matches:  'FINDALL':                 ('FINDALL', '\d', '1 2 3 4 5')
+Count within group:  'COUNT' :                  ('COUNT', 'local_iso_id')
 ---------------------------------------------------------------------------------
    
 Let's create a query with more complex condition. Suppese that we are 
 interested in all lines between 3500 and 4000 with 1e-19 intensity cutoff.
 The query will look like this:
 
->>> Cond = ('AND',('BETWEEN','nu',3500,4000),('>=','Sw',1e-19))
->>> select('H2O',Conditions=Cond,DestinationTableName='tmp')
+>>> Cond = ('AND', ('BETWEEN', 'nu', 3500, 4000), ('>=', 'Sw', 1e-19))
+>>> select('H2O', Conditions=Cond, DestinationTableName='tmp')
 
 Here, apart from other parameters, we have used a new parameter 
 DestinationTableName. This parameter contains a name of the table
@@ -3811,8 +3714,8 @@ a list of solumns.
 
 So, here are some examples of how to use both:
 
->>> nu1 = getColumn('H2O','nu')
->>> nu2,sw2 = getColumns('H2O',['nu','sw'])
+>>> nu1 = getColumn('H2O', 'nu')
+>>> nu2, sw2 = getColumns('H2O', ['nu', 'sw'])
 
 N.B. If you don't remember exact names of columns in a particular table,
 use describeTable to get an info on it's structure!
@@ -3839,7 +3742,7 @@ principal isotopologue of water).
 
 Thus, we have to select two columns:  
 wavenumber (nu) and scaled intensity (sw/0.99731)
->>> select('H2O',)
+>>> select('H2O', )
 
 
   ////////////////////////////
@@ -3852,7 +3755,7 @@ If this parameter is presented in function call, then the query is
 saved to file with the name which was specified in "File".
 
 For example, select all lines from H2O and save the result in file 'H2O.txt':
->>> select('H2O',File='H2O.txt')
+>>> select('H2O', File='H2O.txt')
 
 
   ////////////////////////////////////////////
@@ -3864,16 +3767,16 @@ present in HITRAN. Corresponding functions use the standard HITRAN
 molecule-isotopologue notation:
 
 1) Natural abundances
->>> abundance(mol_id,iso_id)
+>>> abundance(mol_id, iso_id)
 
 2) Molecular masses
->>> molecularMass(mol_id,iso_id)
+>>> molecularMass(mol_id, iso_id)
 
 3) Molecule names
->>> moleculeName(mol_id,iso_id)
+>>> moleculeName(mol_id, iso_id)
 
 4) Isotopologue names
->>> isotopologueName(mol_id,iso_id)
+>>> isotopologueName(mol_id, iso_id)
 
 5) ISO_ID
 >>> getHelp(ISO_ID)
@@ -3986,7 +3889,7 @@ example of how to calculate HT profile on a numpy array.
     eta = 0.5
     Dw = 1.
     ww = arange(w0-Dw, w0+Dw, 0.01)  # GRID WITH THE STEP 0.01 
-    l1 = PROFILE_HT(w0,GammaD,Gamma0,Gamma2,Delta0,Delta2,nuVC,eta,ww)[0]
+    l1 = PROFILE_HT(w0, GammaD, Gamma0, Gamma2, Delta0, Delta2, nuVC, eta, ww)[0]
     # now l1 contains values of HT profile calculates on the grid ww
     
 On additional information about parameters see getHelp(PROFILE_HT).
@@ -4031,15 +3934,15 @@ is released.
 To calculate a partition sum for most of the isotopologues in HITRAN,
 we will use a function partitionSum (use getHelp for detailed info).
 Let's just mention that 
-The syntax is as follows: partitionSum(M,I,T), where M,I - standard 
+The syntax is as follows: partitionSum(M, I, T), where M, I - standard
 HITRAN molecule-isotopologue notation, T - definition of temperature
 range.
 
 Usecase 1: temperatuer is defined by a list:
->>> Q = partitionSum(1,1,[70,80,90])
+>>> Q = partitionSum(1, 1, [70, 80, 90])
 
 Usecase 2: temperature is defined by bounds and the step:
->>> T,Q = partiionSum(1,1,[70,3000],step=1.0)
+>>> T, Q = partiionSum(1, 1, [70, 3000], step=1.0)
 
 In the latter example we calculate a partition sum on a range of
 temperatures from 70K to 3000K using a step 1.0 K, and having arrays 
@@ -4087,12 +3990,12 @@ Let's look more closely to the cross sections based on the Lorentz profile.
 For doing that, let's have a table downloaded from HITRANonline.
 
 # get data on CO2 main isotopologue in the range 2000-2100 cm-1
->>> fetch('CO2',2,1,2000,2100)
+>>> fetch('CO2', 2, 1, 2000, 2100)
 
 OK, now we're ready to run a fast example of how to calculate an
 absorption coefficient cross section:
 
->>> nu,coef = absorptionCoefficient_Lorentz(SourceTables='CO2')
+>>> nu, coef = absorptionCoefficient_Lorentz(SourceTables='CO2')
 
 This example calculates a Lorentz cross section using the whole set of 
 lines in the "co2" table. This is the simplest possible way to use these
@@ -4100,7 +4003,7 @@ functions, because major part of parameters bound to their default values.
 
 If we have matplotlib installed, then we can visualize it using a plotter:
 >>> from pylab import plot
->>> plot(nu,coef) 
+>>> plot(nu, coef)
 
 API provides a flexible control over a calculation procedure. This control
 can be achieved by using a number of input parameters. So, let's dig 
@@ -4113,7 +4016,7 @@ Name                          Default value
 SourceTables                  '__BUFFER__'
 Components                    All isotopologues in SourceTables 
 partitionFunction             PYTIPS
-Environment                   {'T':296.,'p':1.}
+Environment                   {'T':296., 'p':1.}
 WavenumberRange               depends on Components
 WavenumberStep                0.01 cm-1
 WavenumberWing                10 cm-1
@@ -4136,7 +4039,7 @@ SourceTables:     (required parameter)
 
 Components:    (optional parameter)
 
-  List of tuples (M,I,D) to consider in cross section calculation.
+  List of tuples (M, I, D) to consider in cross section calculation.
   M here is a molecule number, I is an isotopologue number, 
   D is an abundance of the component.
   NOTE: If this input contains more than one tuple, then the output 
@@ -4146,7 +4049,7 @@ Components:    (optional parameter)
 partitionFunction:    (optional parameter)
 
   Instance of partition function of the following format:
-  Func(M,I,T), where Func - numae of function, (M,I) - HITRAN numbers
+  Func(M, I, T), where Func - numae of function, (M, I) - HITRAN numbers
   for molecule and isotopologue, T - temperature.
   Function must return only one output - value of partition sum.
   NOTE: Deafult value is PYTIPS - python version of TIPS-2011
@@ -4154,16 +4057,16 @@ partitionFunction:    (optional parameter)
 Environment:    (optional parameter)
 
   Python dictionary containing value of pressure and temperature.
-  The format is as follows: Environment = {'p':pval,'T':tval}, 
+  The format is as follows: Environment = {'p':pval, 'T':tval},
   where "pval" and "tval" are corresponding values in atm and K 
   respectively.
-  NOTE: Default value is {'p':1.0,'T':296.0}
+  NOTE: Default value is {'p':1.0, 'T':296.0}
 
 WavenumberRange:    (optional parameter)
 
   List containing minimum and maximum value of wavenumber to consider
   in cross-section calculation. All lines that are out of htese bounds
-  will be skipped. The firmat is as follows: WavenumberRange=[wn_low,wn_high]
+  will be skipped. The firmat is as follows: WavenumberRange=[wn_low, wn_high]
   NOTE: If this parameter os skipped, then min and max are taken 
   from the data from SourceTables. Deprecated name is OmegaRange.
 
@@ -4224,7 +4127,7 @@ Format:    (optional parameter)
   http://www.gnu.org/software/libc/manual/html_node/Formatted-Output.html
 
 
-N.B. Other functions such as absorptionCoefficient_Voigt(_HT,_Doppler) have
+N.B. Other functions such as absorptionCoefficient_Voigt(_HT, _Doppler) have
 identical parameter sets so the description is the same for each function.
 
 
@@ -4236,16 +4139,16 @@ Let's calculate an absorption, transmittance, and radiance
 spectra on the basis of apsorption coefficient. In order to be consistent
 with internal API's units, we need to have an absorption coefficient cm-1:
 
->>> nu,coef = absorptionCoefficient_Lorentz(SourceTables='CO2',HITRAN_units=False)
+>>> nu, coef = absorptionCoefficient_Lorentz(SourceTables='CO2', HITRAN_units=False)
 
 To calculate absorption spectrum, use the function absorptionSpectrum():
->>> nu,absorp = absorptionSpectrum(nu,coef) 
+>>> nu, absorp = absorptionSpectrum(nu, coef)
 
 To calculate transmittance spectrum, use function transmittanceSpectrum():
->>> nu,trans = transmittanceSpectrum(nu,coef) 
+>>> nu, trans = transmittanceSpectrum(nu, coef)
 
 To calculate radiance spectrum, use function radianceSpectrum():
->>> nu,radi = radianceSpectrum(nu,coef) 
+>>> nu, radi = radianceSpectrum(nu, coef)
 
 
 The last three commands used a default path length (1 m).
@@ -4344,7 +4247,7 @@ SlitFunction     (optional parameter)
 
   Custom instrumental function to convolve with spectrum.
   Format of the instrumental function must be as follows:
-  Func(x,g), where Func - function name, x - wavenumber,
+  Func(x, g), where Func - function name, x - wavenumber,
   g - resolution.
   NOTE: if omitted, then the default value is SLIT_RECTANGULAR
 
@@ -4367,20 +4270,20 @@ The following command will calculate a lower-resolution spectra from
 the CO2 transmittance, which was calculated in a previous section. 
 The Spectral resolution is 1 cm-1, 
 
->>> nu_,trans_,i1,i2,slit = convolveSpectrum(nu,trans)
+>>> nu_, trans_, i1, i2, slit = convolveSpectrum(nu, trans)
 
 The outputs are: 
 
 nu_, trans_ - wavenumbers and transmittance for the resulting 
               low-resolution spectrum.
 
-i1,i2 - indexes for initial nu,trans spectrum denoting the part of 
+i1, i2 - indexes for initial nu, trans spectrum denoting the part of
         wavenumber range which was taken for lower resolution spectrum.
         => Low-res spectrum is calculated on nu[i1:i2]
 
 Note, than to achieve more flexibility, one have to specify most of 
 the optional parameters. For instance, more complete call is as follows:
->>> nu_,trans_,i1,i2,slit = convolveSpectrum(nu,trans,SlitFunction=SLIT_MICHELSON,Resolution=1.0,AF_wing=20.0)
+>>> nu_, trans_, i1, i2, slit = convolveSpectrum(nu, trans, SlitFunction=SLIT_MICHELSON, Resolution=1.0, AF_wing=20.0)
 
 """
 def print_spectra_tutorial():
@@ -4420,71 +4323,71 @@ of HITRANonline API in conjunction with Matplotlib.
 
 First, do some preliminary imports:
 >>> from hapi import *
->>> from pylab import show,plot,subplot,xlim,ylim,title,legend,xlabel,ylabel,hold
+>>> from pylab import show, plot, subplot, xlim, ylim, title, legend, xlabel, ylabel, hold
 
 Start the database 'data':
 >>> db_begin('data') 
 
-Download lines for main isotopologue of ozone in [3900,4050] range:
->>> fetch('O3',3,1,3900,4050)
+Download lines for main isotopologue of ozone in [3900, 4050] range:
+>>> fetch('O3', 3, 1, 3900, 4050)
 
 PLot a sick spectrum using the function getStickXY()
->>> x,y = getStickXY('O3')
->>> plot(x,y); show()
+>>> x, y = getStickXY('O3')
+>>> plot(x, y); show()
 
-Zoom in spectral region [4020,4035] cm-1:
->>> plot(x,y); xlim([4020,4035]); show()
+Zoom in spectral region [4020, 4035] cm-1:
+>>> plot(x, y); xlim([4020, 4035]); show()
 
 Calculate and plot difference between Voigt and Lorentzian lineshape:
->>> wn = arange(3002,3008,0.01) # get wavenumber range of interest
->>> voi = PROFILE_VOIGT(3005,0.1,0.3,wn)[0]   # calc Voigt
->>> lor = PROFILE_LORENTZ(3005,0.3,wn)   # calc Lorentz
+>>> wn = arange(3002, 3008, 0.01) # get wavenumber range of interest
+>>> voi = PROFILE_VOIGT(3005, 0.1, 0.3, wn)[0]   # calc Voigt
+>>> lor = PROFILE_LORENTZ(3005, 0.3, wn)   # calc Lorentz
 >>> diff = voi-lor    # calc difference
->>> subplot(2,1,1)   # upper panel
->>> plot(wn,voi,'red',wn,lor,'blue')  # plot both profiles
->>> legend(['Voigt','Lorentz'])   # show legend
+>>> subplot(2, 1, 1)   # upper panel
+>>> plot(wn, voi, 'red', wn, lor, 'blue')  # plot both profiles
+>>> legend(['Voigt', 'Lorentz'])   # show legend
 >>> title('Voigt and Lorentz profiles')   # show title
->>> subplot(2,1,2)   # lower panel
->>> plot(wn,diff)   # plot diffenence
+>>> subplot(2, 1, 2)   # lower panel
+>>> plot(wn, diff)   # plot diffenence
 >>> title('Voigt-Lorentz residual')   # show title
 >>> show()   # show all figures
 
 Calculate and plot absorption coefficients for ozone using Voigt 
 profile. Spectra are calculated for 4 cases of thermodynamic parameters: 
 (1 atm, 296 K), (5 atm, 296 K), (1 atm, 500 K), and (5 atm, 500 K)
->>> nu1,coef1 = absorptionCoefficient_Voigt(((3,1),),'O3',
-        WavenumberStep=0.01,HITRAN_units=False,GammaL='gamma_self',
-        Environment={'p':1,'T':296.})
->>> nu2,coef2 = absorptionCoefficient_Voigt(((3,1),),'O3',
-        WavenumberStep=0.01,HITRAN_units=False,GammaL='gamma_self',
-        Environment={'p':5,'T':296.})
->>> nu3,coef3 = absorptionCoefficient_Voigt(((3,1),),'O3',
-        WavenumberStep=0.01,HITRAN_units=False,GammaL='gamma_self',
-        Environment={'p':1,'T':500.})
->>> nu4,coef4 = absorptionCoefficient_Voigt(((3,1),),'O3',
-        WavenumberStep=0.01,HITRAN_units=False,GammaL='gamma_self',
-        Environment={'p':5,'T':500.})
->>> subplot(2,2,1); plot(nu1,coef1); title('O3 k(w): p=1 atm, T=296K')
->>> subplot(2,2,2); plot(nu2,coef2); title('O3 k(w): p=5 atm, T=296K')
->>> subplot(2,2,3); plot(nu3,coef3); title('O3 k(w): p=1 atm, T=500K')
->>> subplot(2,2,4); plot(nu4,coef4); title('O3 k(w): p=5 atm, T=500K')
+>>> nu1, coef1 = absorptionCoefficient_Voigt(((3, 1), ), 'O3',
+        WavenumberStep=0.01, HITRAN_units=False, GammaL='gamma_self',
+        Environment={'p':1, 'T':296.})
+>>> nu2, coef2 = absorptionCoefficient_Voigt(((3, 1), ), 'O3',
+        WavenumberStep=0.01, HITRAN_units=False, GammaL='gamma_self',
+        Environment={'p':5, 'T':296.})
+>>> nu3, coef3 = absorptionCoefficient_Voigt(((3, 1), ), 'O3',
+        WavenumberStep=0.01, HITRAN_units=False, GammaL='gamma_self',
+        Environment={'p':1, 'T':500.})
+>>> nu4, coef4 = absorptionCoefficient_Voigt(((3, 1), ), 'O3',
+        WavenumberStep=0.01, HITRAN_units=False, GammaL='gamma_self',
+        Environment={'p':5, 'T':500.})
+>>> subplot(2, 2, 1); plot(nu1, coef1); title('O3 k(w): p=1 atm, T=296K')
+>>> subplot(2, 2, 2); plot(nu2, coef2); title('O3 k(w): p=5 atm, T=296K')
+>>> subplot(2, 2, 3); plot(nu3, coef3); title('O3 k(w): p=1 atm, T=500K')
+>>> subplot(2, 2, 4); plot(nu4, coef4); title('O3 k(w): p=5 atm, T=500K')
 >>> show()
 
 Calculate and plot absorption, transmittance and radiance spectra for 1 atm 
 and 296K. Path length is set to 10 m.
->>> nu,absorp = absorptionSpectrum(nu1,coef1,Environment={'l':1000.})
->>> nu,transm = transmittanceSpectrum(nu1,coef1,Environment={'l':1000.})
->>> nu,radian = radianceSpectrum(nu1,coef1,Environment={'l':1000.,'T':296.})
->>> subplot(2,2,1); plot(nu1,coef1,'r'); title('O3 k(w): p=1 atm, T=296K')
->>> subplot(2,2,2); plot(nu,absorp,'g'); title('O3 absorption: p=1 atm, T=296K')
->>> subplot(2,2,3); plot(nu,transm,'b'); title('O3 transmittance: p=1 atm, T=296K')
->>> subplot(2,2,4); plot(nu,radian,'y'); title('O3 radiance: p=1 atm, T=296K')
+>>> nu, absorp = absorptionSpectrum(nu1, coef1, Environment={'l':1000.})
+>>> nu, transm = transmittanceSpectrum(nu1, coef1, Environment={'l':1000.})
+>>> nu, radian = radianceSpectrum(nu1, coef1, Environment={'l':1000., 'T':296.})
+>>> subplot(2, 2, 1); plot(nu1, coef1, 'r'); title('O3 k(w): p=1 atm, T=296K')
+>>> subplot(2, 2, 2); plot(nu, absorp, 'g'); title('O3 absorption: p=1 atm, T=296K')
+>>> subplot(2, 2, 3); plot(nu, transm, 'b'); title('O3 transmittance: p=1 atm, T=296K')
+>>> subplot(2, 2, 4); plot(nu, radian, 'y'); title('O3 radiance: p=1 atm, T=296K')
 >>> show()
 
 Calculate and compare high resolution spectrum for O3 with lower resolution
 spectrum convoluted with an instrumental function of ideal Michelson interferometer.
->>> nu_,trans_,i1,i2,slit = convolveSpectrum(nu,transm,SlitFunction=SLIT_MICHELSON,Resolution=1.0,AF_wing=20.0)
->>> plot(nu,transm,'red',nu_,trans_,'blue'); legend(['HI-RES','Michelson']); show()
+>>> nu_, trans_, i1, i2, slit = convolveSpectrum(nu, transm, SlitFunction=SLIT_MICHELSON, Resolution=1.0, AF_wing=20.0)
+>>> plot(nu, transm, 'red', nu_, trans_, 'blue'); legend(['HI-RES', 'Michelson']); show()
 
 """
 def print_plotting_tutorial():
@@ -4591,7 +4494,7 @@ def getHelp(arg=None):
 # for a specified isotopologue
 # M - molecule number
 # I - isotopologue number
-def abundance(M,I):
+def abundance(M, I):
     """
     INPUT PARAMETERS: 
         M: HITRAN molecule number
@@ -4603,16 +4506,16 @@ def abundance(M,I):
         Return natural (Earth) abundance of HITRAN isotolopogue.
     ---
     EXAMPLE OF USAGE:
-        ab = abundance(1,1) # H2O
+        ab = abundance(1, 1) # H2O
     ---
     """
-    return ISO[(M,I)][ISO_INDEX['abundance']]
+    return ISO[(M, I)][ISO_INDEX['abundance']]
 
 # Get molecular mass
 # for a specified isotopologue
 # M - molecule number
 # I - isotopologue number
-def molecularMass(M,I):
+def molecularMass(M, I):
     """
     INPUT PARAMETERS: 
         M: HITRAN molecule number
@@ -4624,10 +4527,10 @@ def molecularMass(M,I):
         Return molecular mass of HITRAN isotolopogue.
     ---
     EXAMPLE OF USAGE:
-        mass = molecularMass(1,1) # H2O
+        mass = molecularMass(1, 1) # H2O
     ---
     """
-    return ISO[(M,I)][ISO_INDEX['mass']]
+    return ISO[(M, I)][ISO_INDEX['mass']]
 
 # Get molecule name
 # for a specified isotopologue
@@ -4647,13 +4550,13 @@ def moleculeName(M):
         molname = moleculeName(1) # H2O
     ---
     """
-    return ISO[(M,1)][ISO_INDEX['mol_name']]
+    return ISO[(M, 1)][ISO_INDEX['mol_name']]
 
 # Get isotopologue name
 # for a specified isotopologue
 # M - molecule number
 # I - isotopologue number
-def isotopologueName(M,I):
+def isotopologueName(M, I):
     """
     INPUT PARAMETERS: 
         M: HITRAN molecule number
@@ -4665,10 +4568,10 @@ def isotopologueName(M,I):
         Return name of HITRAN isotolopogue.
     ---
     EXAMPLE OF USAGE:
-        isoname = isotopologueName(1,1) # H2O
+        isoname = isotopologueName(1, 1) # H2O
     ---
     """
-    return ISO[(M,I)][ISO_INDEX['iso_name']]
+    return ISO[(M, I)][ISO_INDEX['iso_name']]
 
 # ----------------------- table list ----------------------------------
 def tableList():
@@ -4745,10 +4648,10 @@ def db_commit():
 
 # ------------------ QUERY HITRAN ---------------------------------------
 
-def comment(TableName,Comment):
+def comment(TableName, Comment):
     LOCAL_TABLE_CACHE[TableName]['header']['comment'] = Comment
 
-def fetch_by_ids(TableName,iso_id_list,numin,numax,ParameterGroups=[],Parameters=[]):
+def fetch_by_ids(TableName, iso_id_list, numin, numax, ParameterGroups=[], Parameters=[]):
     """
     INPUT PARAMETERS: 
         TableName:   local table name to fetch in (required)
@@ -4766,20 +4669,20 @@ def fetch_by_ids(TableName,iso_id_list,numin,numax,ParameterGroups=[],Parameters
         multiple species into single table.
     ---
     EXAMPLE OF USAGE:
-        fetch_by_ids('water',[1,2,3,4],4000,4100)
+        fetch_by_ids('water', [1, 2, 3, 4], 4000, 4100)
     ---
     """
-    if type(iso_id_list) not in set([list,tuple]):
+    if type(iso_id_list) not in set([list, tuple]):
        iso_id_list = [iso_id_list]
-    queryHITRAN(TableName,iso_id_list,numin,numax,
-                pargroups=ParameterGroups,params=Parameters)
+    queryHITRAN(TableName, iso_id_list, numin, numax,
+                pargroups=ParameterGroups, params=Parameters)
     iso_names = [ISO_ID[i][ISO_ID_INDEX['iso_name']] for i in iso_id_list]
-    Comment = 'Contains lines for '+','.join(iso_names)
-    Comment += ('\n in %.3f-%.3f wavenumber range' % (numin,numax))
-    comment(TableName,Comment)
+    Comment = 'Contains lines for '+', '.join(iso_names)
+    Comment += ('\n in %.3f-%.3f wavenumber range' % (numin, numax))
+    comment(TableName, Comment)
 
-#def queryHITRAN(TableName,iso_id_list,numin,numax):
-def fetch(TableName,M,I,numin,numax,ParameterGroups=[],Parameters=[]):
+#def queryHITRAN(TableName, iso_id_list, numin, numax):
+def fetch(TableName, M, I, numin, numax, ParameterGroups=[], Parameters=[]):
     """
     INPUT PARAMETERS: 
         TableName:   local table name to fetch in (required)
@@ -4799,16 +4702,13 @@ def fetch(TableName,M,I,numin,numax,ParameterGroups=[],Parameters=[]):
         single table use fetch_by_ids instead.
     ---
     EXAMPLE OF USAGE:
-        fetch('HOH',1,1,4000,4100)
+        fetch('HOH', 1, 1, 4000, 4100)
     ---
     """
-    queryHITRAN(TableName,[ISO[(M,I)][ISO_INDEX['id']]],numin,numax,
-                pargroups=ParameterGroups,params=Parameters)
-    iso_name = ISO[(M,I)][ISO_INDEX['iso_name']]
+    queryHITRAN(TableName, [ISO[(M, I)][ISO_INDEX['id']]], numin, numax,
+                pargroups=ParameterGroups, params=Parameters)
+    iso_name = ISO[(M, I)][ISO_INDEX['iso_name']]
     Comment = 'Contains lines for '+iso_name
-    Comment += ('\n in %.3f-%.3f wavenumber range' % (numin,numax))
-    comment(TableName,Comment)
-
     Comment += ('\n in %.3f-%.3f wavenumber range' % (numin, numax))
     comment(TableName, Comment)
 
@@ -4820,20 +4720,20 @@ def fetch(TableName,M,I,numin,numax,ParameterGroups=[],Parameters=[]):
 # define static data
 zone = __ComplexType__(1.0e0 + 0.0e0j)
 zi = __ComplexType__(0.0e0 + 1.0e0j)
-tt = __FloatType__([0.5e0,1.5e0,2.5e0,3.5e0,4.5e0,5.5e0,6.5e0,7.5e0,8.5e0,9.5e0,10.5e0,11.5e0,12.5e0,13.5e0,14.5e0])
+tt = __FloatType__([0.5e0, 1.5e0, 2.5e0, 3.5e0, 4.5e0, 5.5e0, 6.5e0, 7.5e0, 8.5e0, 9.5e0, 10.5e0, 11.5e0, 12.5e0, 13.5e0, 14.5e0])
 pipwoeronehalf = __FloatType__(0.564189583547756e0)
 
 # "naive" implementation for benchmarks
-def cpf3(X,Y):
+def cpf3(X, Y):
 
-    # X,Y,WR,WI - numpy arrays
+    # X, Y, WR, WI - numpy arrays
     if type(X) != ndarray: 
-        if type(X) not in set([list,tuple]): 
+        if type(X) not in set([list, tuple]):
             X = array([X])
         else:
             X = array(X)
     if type(Y) != ndarray: 
-        if type(Y) not in set([list,tuple]): 
+        if type(Y) not in set([list, tuple]):
             Y = array([Y])
         else:
             Y = array(Y)
@@ -4851,21 +4751,21 @@ def cpf3(X,Y):
     
     return zsum.real, zsum.imag
 
-T = __FloatType__([0.314240376e0,0.947788391e0,1.59768264e0,2.27950708e0,3.02063703e0,3.8897249e0])
-U = __FloatType__([1.01172805e0,-0.75197147e0,1.2557727e-2,1.00220082e-2,-2.42068135e-4,5.00848061e-7])
-S = __FloatType__([1.393237e0,0.231152406e0,-0.155351466e0,6.21836624e-3,9.19082986e-5,-6.27525958e-7])
+T = __FloatType__([0.314240376e0, 0.947788391e0, 1.59768264e0, 2.27950708e0, 3.02063703e0, 3.8897249e0])
+U = __FloatType__([1.01172805e0, -0.75197147e0, 1.2557727e-2, 1.00220082e-2, -2.42068135e-4, 5.00848061e-7])
+S = __FloatType__([1.393237e0, 0.231152406e0, -0.155351466e0, 6.21836624e-3, 9.19082986e-5, -6.27525958e-7])
 
 # Complex probability function implementation (Humlicek)
-def cpf(X,Y):
+def cpf(X, Y):
 
-    # X,Y,WR,WI - numpy arrays
+    # X, Y, WR, WI - numpy arrays
     if type(X) != ndarray: 
-        if type(X) not in set([list,tuple]): 
+        if type(X) not in set([list, tuple]):
             X = array([X])
         else:
             X = array(X)
     if type(Y) != ndarray: 
-        if type(Y) not in set([list,tuple]): 
+        if type(Y) not in set([list, tuple]):
             Y = array([Y])
         else:
             Y = array(Y)
@@ -4883,7 +4783,7 @@ def cpf(X,Y):
         zsum_REGION3 += zterm
     zsum_REGION3 *= zi*zm1*pipwoeronehalf
     
-    index_REGION12 = setdiff1d(array(arange(len(X))),array(index_REGION3))
+    index_REGION12 = setdiff1d(array(arange(len(X))), array(index_REGION3))
     X_REGION12 = X[index_REGION12]
     Y_REGION12 = Y[index_REGION12]
     
@@ -4932,11 +4832,11 @@ def cpf(X,Y):
         WI_REGION2 = WI_REGION2 + U[I]*(D2_REGION2 + D4_REGION2) + S[I]*(D1_REGION2 - D3_REGION2)
 
     # REGION3
-    index_REGION1 = setdiff1d(array(index_REGION12),array(index_REGION2))
+    index_REGION1 = setdiff1d(array(index_REGION12), array(index_REGION2))
     X_REGION1 = X[index_REGION1]
     Y_REGION1 = X[index_REGION1]
     
-    subindex_REGION1 = setdiff1d(array(arange(len(index_REGION12))),array(subindex_REGION2))
+    subindex_REGION1 = setdiff1d(array(arange(len(index_REGION12))), array(subindex_REGION2))
     Y1_REGION1 = Y1_REGION12[subindex_REGION1]
     Y2_REGION1 = Y2_REGION12[subindex_REGION1]
     
@@ -4969,7 +4869,7 @@ def cpf(X,Y):
     WR_TOTAL[index_REGION1] = WR_REGION1
     WI_TOTAL[index_REGION1] = WI_REGION1
     
-    return WR_TOTAL,WI_TOTAL
+    return WR_TOTAL, WI_TOTAL
 
 
 hcpf = cpf # stub for initial cpf
@@ -4991,28 +4891,28 @@ def polyval(p, x):
     return y
 """;
     
-def cef(x,y,N):
+def cef(x, y, N):
     # Computes the function w(z) = exp(-zA2) erfc(-iz) using a rational
     # series with N terms. It is assumed that Im(z) > 0 or Im(z) = 0.
     z = x + 1.0j*y
-    M = 2*N; M2 = 2*M; k = arange(-M+1,M) #'; # M2 = no. of sampling points.
+    M = 2*N; M2 = 2*M; k = arange(-M+1, M) #'; # M2 = no. of sampling points.
     L = sqrt(N/sqrt(2)); # Optimal choice of L.
     theta = k*pi/M; t = L*tan(theta/2); # Variables theta and t.
     #f = exp(-t.A2)*(LA2+t.A2); f = [0; f]; # Function to be transformed.
     f = zeros(len(t)+1); f[0] = 0
     f[1:] = exp(-t**2)*(L**2+t**2)
-    #f = insert(exp(-t**2)*(L**2+t**2),0,0)
+    #f = insert(exp(-t**2)*(L**2+t**2), 0, 0)
     a = real(fft(fftshift(f)))/M2; # Coefficients of transform.
     a = flipud(a[1:N+1]); # Reorder coefficients.
-    Z = (L+1.0j*z)/(L-1.0j*z); p = polyval(a,Z); # Polynomial evaluation.
+    Z = (L+1.0j*z)/(L-1.0j*z); p = polyval(a, Z); # Polynomial evaluation.
     w = 2*p/(L-1.0j*z)**2+(1/sqrt(pi))/(L-1.0j*z); # Evaluate w(z).
     return w
 
 # weideman24 by default    
-#weideman24 = lambda x,y: cef(x,y,24)
-weideman = lambda x,y,n: cef(x,y,n)
+#weideman24 = lambda x, y: cef(x, y, 24)
+weideman = lambda x, y, n: cef(x, y, n)
 
-def hum1_wei(x,y,n=24):
+def hum1_wei(x, y, n=24):
     t = y-1.0j*x
     cerf=1/sqrt(pi)*t/(0.5+t**2)
     """
@@ -5021,15 +4921,15 @@ def hum1_wei(x,y,n=24):
     """
     mask = abs(x)+y<15.0
     if any(mask):
-        w24 = weideman(x[mask],y[mask],n)
-        place(cerf,mask,w24)
-    return cerf.real,cerf.imag
+        w24 = weideman(x[mask], y[mask], n)
+        place(cerf, mask, w24)
+    return cerf.real, cerf.imag
 
 VARIABLES['CPF'] = hum1_wei
 #VARIABLES['CPF'] = cpf
     
 # ------------------ Hartmann-Tran Profile (HTP) ------------------------
-def pcqsdhc(sg0,GamD,Gam0,Gam2,Shift0,Shift2,anuVC,eta,sg,Ylm=0.0):
+def pcqsdhc(sg0, GamD, Gam0, Gam2, Shift0, Shift2, anuVC, eta, sg, Ylm=0.0):
     #-------------------------------------------------
     #      "pCqSDHC": partially-Correlated quadratic-Speed-Dependent Hard-Collision
     #      Subroutine to Compute the complex normalized spectral shape of an 
@@ -5073,12 +4973,12 @@ def pcqsdhc(sg0,GamD,Gam0,Gam2,Shift0,Shift2,anuVC,eta,sg,Ylm=0.0):
     
     # sg is the only vector argument which is passed to function
     
-    if type(sg) not in set([array,ndarray,list,tuple]):
+    if type(sg) not in set([array, ndarray, list, tuple]):
         sg = array([sg])
     
     number_of_points = len(sg)
-    Aterm_GLOBAL = zeros(number_of_points,dtype=__ComplexType__)
-    Bterm_GLOBAL = zeros(number_of_points,dtype=__ComplexType__)
+    Aterm_GLOBAL = zeros(number_of_points, dtype=__ComplexType__)
+    Bterm_GLOBAL = zeros(number_of_points, dtype=__ComplexType__)
 
     cte=sqrt(log(2.0e0))/GamD
     rpi=sqrt(pi)
@@ -5094,7 +4994,7 @@ def pcqsdhc(sg0,GamD,Gam0,Gam2,Shift0,Shift2,anuVC,eta,sg,Ylm=0.0):
         Z1 = (iz*(sg0 - sg) + c0t) * cte
         xZ1 = -Z1.imag
         yZ1 = Z1.real
-        WR1,WI1 = VARIABLES['CPF'](xZ1,yZ1)
+        WR1, WI1 = VARIABLES['CPF'](xZ1, yZ1)
         Aterm_GLOBAL = rpi*cte*__ComplexType__(WR1 + 1.0e0j*WI1)
         index_Z1 = abs(Z1) <= 4.0e3
         index_NOT_Z1 = ~index_Z1
@@ -5126,8 +5026,8 @@ def pcqsdhc(sg0,GamD,Gam0,Gam2,Shift0,Shift2,anuVC,eta,sg,Ylm=0.0):
             SZ1 = sqrt(xZ1**2 + yZ1**2)
             SZ2 = sqrt(xZ2**2 + yZ2**2)
             DSZ = abs(SZ1 - SZ2)
-            SZmx = maximum(SZ1,SZ2)
-            SZmn = minimum(SZ1,SZ2)
+            SZmx = maximum(SZ1, SZ2)
+            SZmn = minimum(SZ1, SZ2)
             length_PART4 = len(index_PART4)
             WR1_PART4 = zeros(length_PART4)
             WI1_PART4 = zeros(length_PART4)
@@ -5136,15 +5036,15 @@ def pcqsdhc(sg0,GamD,Gam0,Gam2,Shift0,Shift2,anuVC,eta,sg,Ylm=0.0):
             index_CPF3 = (DSZ <= 1.0e0) & (SZmx > 8.0e0) & (SZmn <= 8.0e0)
             index_CPF = ~index_CPF3 # can be removed
             if any(index_CPF3):
-                WR1,WI1 = cpf3(xZ1[index_CPF3],yZ1[index_CPF3])
-                WR2,WI2 = cpf3(xZ2[index_CPF3],yZ2[index_CPF3])
+                WR1, WI1 = cpf3(xZ1[index_CPF3], yZ1[index_CPF3])
+                WR2, WI2 = cpf3(xZ2[index_CPF3], yZ2[index_CPF3])
                 WR1_PART4[index_CPF3] = WR1
                 WI1_PART4[index_CPF3] = WI1
                 WR2_PART4[index_CPF3] = WR2
                 WI2_PART4[index_CPF3] = WI2
             if any(index_CPF):
-                WR1,WI1 = VARIABLES['CPF'](xZ1[index_CPF],yZ1[index_CPF])
-                WR2,WI2 = VARIABLES['CPF'](xZ2[index_CPF],yZ2[index_CPF])
+                WR1, WI1 = VARIABLES['CPF'](xZ1[index_CPF], yZ1[index_CPF])
+                WR2, WI2 = VARIABLES['CPF'](xZ2[index_CPF], yZ2[index_CPF])
                 WR1_PART4[index_CPF] = WR1
                 WI1_PART4[index_CPF] = WI1
                 WR2_PART4[index_CPF] = WR2
@@ -5166,8 +5066,8 @@ def pcqsdhc(sg0,GamD,Gam0,Gam2,Shift0,Shift2,anuVC,eta,sg,Ylm=0.0):
             yZ1 = Z1.real
             xZ2 = -Z2.imag
             yZ2 = Z2.real
-            WR1_PART2,WI1_PART2 = VARIABLES['CPF'](xZ1,yZ1)
-            WR2_PART2,WI2_PART2 = VARIABLES['CPF'](xZ2,yZ2) 
+            WR1_PART2, WI1_PART2 = VARIABLES['CPF'](xZ1, yZ1)
+            WR2_PART2, WI2_PART2 = VARIABLES['CPF'](xZ2, yZ2)
             Aterm = rpi*cte*(__ComplexType__(WR1_PART2 + 1.0e0j*WI1_PART2) - __ComplexType__(WR2_PART2 + 1.0e0j*WI2_PART2))
             Bterm = (-1.0e0 +
                       rpi/(2.0e0*csqrtY)*(1.0e0 - Z1**2)*__ComplexType__(WR1_PART2 + 1.0e0j*WI1_PART2)-
@@ -5180,15 +5080,15 @@ def pcqsdhc(sg0,GamD,Gam0,Gam2,Shift0,Shift2,anuVC,eta,sg,Ylm=0.0):
             X_TMP = X[index_PART3]
             xZ1 = -sqrt(X_TMP + Y).imag
             yZ1 = sqrt(X_TMP + Y).real
-            WR1_PART3,WI1_PART3 =  VARIABLES['CPF'](xZ1,yZ1) 
+            WR1_PART3, WI1_PART3 =  VARIABLES['CPF'](xZ1, yZ1)
             index_ABS = abs(sqrt(X_TMP)) <= 4.0e3
             index_NOT_ABS = ~index_ABS
-            Aterm = zeros(len(index_PART3),dtype=__ComplexType__)
-            Bterm = zeros(len(index_PART3),dtype=__ComplexType__)
+            Aterm = zeros(len(index_PART3), dtype=__ComplexType__)
+            Bterm = zeros(len(index_PART3), dtype=__ComplexType__)
             if any(index_ABS):
                 xXb = -sqrt(X).imag
                 yXb = sqrt(X).real
-                WRb,WIb = VARIABLES['CPF'](xXb,yXb)
+                WRb, WIb = VARIABLES['CPF'](xXb, yXb)
                 Aterm[index_ABS] = (2.0e0*rpi/c2t)*(1.0e0/rpi - sqrt(X_TMP[index_ABS])*__ComplexType__(WRb + 1.0e0j*WIb))
                 Bterm[index_ABS] = (1.0e0/c2t)*(-1.0e0+
                                   2.0e0*rpi*(1.0e0 - X_TMP[index_ABS]-2.0e0*Y)*(1.0e0/rpi-sqrt(X_TMP[index_ABS])*__ComplexType__(WRb + 1.0e0j*WIb))+
@@ -5212,7 +5112,7 @@ def pcqsdhc(sg0,GamD,Gam0,Gam2,Shift0,Shift2,anuVC,eta,sg,Ylm=0.0):
 
 # set interfaces for profiles
 
-def PROFILE_HT(Nu,GammaD,Gamma0,Gamma2,Delta0,Delta2,NuVC,Eta,WnGrid,YRosen=0.0,Sw=1.0):
+def PROFILE_HT(Nu, GammaD, Gamma0, Gamma2, Delta0, Delta2, NuVC, Eta, WnGrid, YRosen=0.0, Sw=1.0):
     """
     #-------------------------------------------------
     #      "pCqSDHC": partially-Correlated quadratic-Speed-Dependent "Hard-Collision"
@@ -5262,11 +5162,11 @@ def PROFILE_HT(Nu,GammaD,Gamma0,Gamma2,Delta0,Delta2,NuVC,Eta,WnGrid,YRosen=0.0,
     #
     #-------------------------------------------------
     """
-    return Sw*pcqsdhc(Nu,GammaD,Gamma0,Gamma2,Delta0,Delta2,NuVC,Eta,WnGrid,YRosen)[0]
+    return Sw*pcqsdhc(Nu, GammaD, Gamma0, Gamma2, Delta0, Delta2, NuVC, Eta, WnGrid, YRosen)[0]
 
 PROFILE_HTP = PROFILE_HT # stub for backwards compatibility
 
-def PROFILE_SDRAUTIAN(Nu,GammaD,Gamma0,Gamma2,Delta0,Delta2,NuVC,WnGrid,YRosen=0.0,Sw=1.0):
+def PROFILE_SDRAUTIAN(Nu, GammaD, Gamma0, Gamma2, Delta0, Delta2, NuVC, WnGrid, YRosen=0.0, Sw=1.0):
     """
     # Speed dependent Rautian profile based on HTP.
     # Input parameters:
@@ -5280,9 +5180,9 @@ def PROFILE_SDRAUTIAN(Nu,GammaD,Gamma0,Gamma2,Delta0,Delta2,NuVC,WnGrid,YRosen=0
     #      WnGrid    : Current WaveNumber of the Computation in cm-1 (Input).
     #      YRosen    : 1st order (Rosenkranz) line mixing coefficients in cm-1 (Input)
     """
-    return Sw*pcqsdhc(Nu,GammaD,Gamma0,Gamma2,Delta0,Delta2,NuVC,cZero,WnGrid,YRosen)[0]
+    return Sw*pcqsdhc(Nu, GammaD, Gamma0, Gamma2, Delta0, Delta2, NuVC, cZero, WnGrid, YRosen)[0]
 
-def PROFILE_RAUTIAN(Nu,GammaD,Gamma0,Delta0,NuVC,WnGrid,Ylm=0.0,Sw=1.0):
+def PROFILE_RAUTIAN(Nu, GammaD, Gamma0, Delta0, NuVC, WnGrid, Ylm=0.0, Sw=1.0):
     """
     # Rautian profile based on HTP.
     # Input parameters:
@@ -5294,9 +5194,9 @@ def PROFILE_RAUTIAN(Nu,GammaD,Gamma0,Delta0,NuVC,WnGrid,Ylm=0.0,Sw=1.0):
     #      WnGrid    : Current WaveNumber of the Computation in cm-1 (Input).
     #      YRosen    : 1st order (Rosenkranz) line mixing coefficients in cm-1 (Input)
     """
-    return Sw*pcqsdhc(Nu,GammaD,Gamma0,cZero,Delta0,cZero,NuVC,cZero,WnGrid,YRosen)[0]
+    return Sw*pcqsdhc(Nu, GammaD, Gamma0, cZero, Delta0, cZero, NuVC, cZero, WnGrid, YRosen)[0]
 
-def PROFILE_SDVOIGT(Nu,GammaD,Gamma0,Gamma2,Delta0,Delta2,WnGrid,YRosen=0.0,Sw=1.0):
+def PROFILE_SDVOIGT(Nu, GammaD, Gamma0, Gamma2, Delta0, Delta2, WnGrid, YRosen=0.0, Sw=1.0):
     """
     # Speed dependent Voigt profile based on HTP.
     # Input parameters:
@@ -5310,10 +5210,10 @@ def PROFILE_SDVOIGT(Nu,GammaD,Gamma0,Gamma2,Delta0,Delta2,WnGrid,YRosen=0.0,Sw=1
     #      YRosen    : 1st order (Rosenkranz) line mixing coefficients in cm-1 (Input)
     """
     if FLAG_DEBUG_PROFILE: 
-        print('PROFILE_SDVOIGT>>>',Nu,GammaD,Gamma0,Gamma2,Delta0,Delta2,WnGrid,YRosen,Sw)
-    return Sw*pcqsdhc(Nu,GammaD,Gamma0,Gamma2,Delta0,Delta2,cZero,cZero,WnGrid,YRosen)[0]
+        print('PROFILE_SDVOIGT>>>', Nu, GammaD, Gamma0, Gamma2, Delta0, Delta2, WnGrid, YRosen, Sw)
+    return Sw*pcqsdhc(Nu, GammaD, Gamma0, Gamma2, Delta0, Delta2, cZero, cZero, WnGrid, YRosen)[0]
     
-def PROFILE_VOIGT(Nu,GammaD,Gamma0,Delta0,WnGrid,YRosen=0.0,Sw=1.0):
+def PROFILE_VOIGT(Nu, GammaD, Gamma0, Delta0, WnGrid, YRosen=0.0, Sw=1.0):
     """
     # Voigt profile based on HTP.
     # Input parameters:
@@ -5324,12 +5224,12 @@ def PROFILE_VOIGT(Nu,GammaD,Gamma0,Delta0,WnGrid,YRosen=0.0,Sw=1.0):
     #      WnGrid    : Current WaveNumber of the Computation in cm-1 (Input).
     #      YRosen    : 1st order (Rosenkranz) line mixing coefficients in cm-1 (Input)
     """
-    #return PROFILE_HTP(Nu,GammaD,Gamma0,cZero,cZero,cZero,cZero,cZero,WnGrid,YRosen)[0]
+    #return PROFILE_HTP(Nu, GammaD, Gamma0, cZero, cZero, cZero, cZero, cZero, WnGrid, YRosen)[0]
     if FLAG_DEBUG_PROFILE: 
-        print('PROFILE_VOIGT>>>',Nu,GammaD,Gamma0,Delta0,WnGrid,YRosen,Sw)
-    return Sw*pcqsdhc(Nu,GammaD,Gamma0,cZero,Delta0,cZero,cZero,cZero,WnGrid,YRosen)[0]
+        print('PROFILE_VOIGT>>>', Nu, GammaD, Gamma0, Delta0, WnGrid, YRosen, Sw)
+    return Sw*pcqsdhc(Nu, GammaD, Gamma0, cZero, Delta0, cZero, cZero, cZero, WnGrid, YRosen)[0]
 
-def PROFILE_LORENTZ(Nu,Gamma0,Delta0,WnGrid,YRosen=0.0,Sw=1.0):
+def PROFILE_LORENTZ(Nu, Gamma0, Delta0, WnGrid, YRosen=0.0, Sw=1.0):
     """
     # Lorentz profile.
     # Input parameters:
@@ -5345,7 +5245,7 @@ def PROFILE_LORENTZ(Nu,Gamma0,Delta0,WnGrid,YRosen=0.0,Sw=1.0):
     else:
         return Sw*(Gamma0+YRosen*(WnGrid+Delta0-Nu))/(pi*(Gamma0**2+(WnGrid+Delta0-Nu)**2))
 
-def PROFILE_DOPPLER(Nu,GammaD,WnGrid,Sw=1.0):
+def PROFILE_DOPPLER(Nu, GammaD, WnGrid, Sw=1.0):
     """
     # Doppler profile.
     # Input parameters:
@@ -5356,7 +5256,7 @@ def PROFILE_DOPPLER(Nu,GammaD,WnGrid,Sw=1.0):
     return Sw*cSqrtLn2divSqrtPi*exp(-cLn2*((WnGrid-Nu)/GammaD)**2)/GammaD
 
 # Volume concentration of all gas molecules at the pressure p and temperature T
-def volumeConcentration(p,T):
+def volumeConcentration(p, T):
     return (p/9.869233e-7)/(cBolts*T) # CGS
 
 # ------------------------------- PARAMETER DEPENDENCIES --------------------------------
@@ -5364,29 +5264,29 @@ def volumeConcentration(p,T):
 # THE LOGIC OF THIS SECTION IS THAT NOTHING (OR AT LEAST MINUMUM) SHOULD BE HARD-CODED INTO THE GENERIC ABSCOEF ROUTINES
 # TRYING TO AVOID THE OBJECT ORIENTED APPROACH HERE IN ORDER TO CORRESPOND TO THE OVERALL STYLE OF THE PACKAGE
 
-def ladder(parname,species,envdep_presets,TRANS,flag_exception=False): # priority search for the parameters
+def ladder(parname, species, envdep_presets, TRANS, flag_exception=False): # priority search for the parameters
     INFO = {}  
     if FLAG_DEBUG_LADDER: print('\nladder>>> ======================')
-    if FLAG_DEBUG_LADDER: print('ladder>>> Calculating %s for %s broadener'%(parname,species))
-    if FLAG_DEBUG_LADDER: print('ladder>>> Envdep presets: ',envdep_presets)
-    for profile,envdep in envdep_presets:
+    if FLAG_DEBUG_LADDER: print('ladder>>> Calculating %s for %s broadener'%(parname, species))
+    if FLAG_DEBUG_LADDER: print('ladder>>> Envdep presets: ', envdep_presets)
+    for profile, envdep in envdep_presets:
         try:
-            if FLAG_DEBUG_LADDER: print('\nladder>>> Trying: ',profile,envdep)
-            INFO,ARGS = PRESSURE_INDUCED_ENVDEP[profile][parname][envdep]['getargs'](species,TRANS)
+            if FLAG_DEBUG_LADDER: print('\nladder>>> Trying: ', profile, envdep)
+            INFO, ARGS = PRESSURE_INDUCED_ENVDEP[profile][parname][envdep]['getargs'](species, TRANS)
             parval_species = PRESSURE_INDUCED_ENVDEP[profile][parname][envdep]['depfunc'](**ARGS)
             if FLAG_DEBUG_LADDER: print('ladder>>> success!\n')
-            return INFO,parval_species
+            return INFO, parval_species
         #except KeyError as e:
         except Exception as e:
             if flag_exception:
                 raise e
             else:
                 INFO['status'] = e.__class__.__name__+': '+str(e)
-                if FLAG_DEBUG_LADDER: print('ladder>>>',e.__class__.__name__+': '+str(e),': ',parname,profile,envdep)
+                if FLAG_DEBUG_LADDER: print('ladder>>>', e.__class__.__name__+': '+str(e), ': ', parname, profile, envdep)
     if FLAG_DEBUG_LADDER: print('ladder>>> ')
-    return INFO,0
+    return INFO, 0
 
-def calculate_parameter_PI(parname,envdep_presets,TRANS,CALC_INFO):
+def calculate_parameter_PI(parname, envdep_presets, TRANS, CALC_INFO):
     """
     Default function for calculating the pressure-induced parameters.
     Use this function only if the final lineshape parameter needs summation
@@ -5400,22 +5300,22 @@ def calculate_parameter_PI(parname,envdep_presets,TRANS,CALC_INFO):
         CALC_INFO[parname] = {'mixture':{}}
     for species in Diluent:
         abun = Diluent[species]
-        INFO,parval_species = ladder(parname,species,envdep_presets,TRANS)
+        INFO, parval_species = ladder(parname, species, envdep_presets, TRANS)
         parval += abun*parval_species
         if calc_info_flag: 
-            CALC_INFO[parname]['mixture'][species] = {'args':INFO,'value':parval_species}
+            CALC_INFO[parname]['mixture'][species] = {'args':INFO, 'value':parval_species}
     if calc_info_flag: 
         CALC_INFO[parname]['status'] = 'ok'
         CALC_INFO[parname]['value'] = parval
     return parval
 
-def calculate_parameter_Nu(dummy,TRANS,CALC_INFO=None):
+def calculate_parameter_Nu(dummy, TRANS, CALC_INFO=None):
     nu = TRANS['nu']
     if type(CALC_INFO) is dict: 
-        CALC_INFO['GammaD'] = {'value':nu,'mixture':{'generic':{'args':{}}}}
+        CALC_INFO['GammaD'] = {'value':nu, 'mixture':{'generic':{'args':{}}}}
     return nu
 
-def calculate_parameter_Sw(dummy,TRANS,CALC_INFO=None):
+def calculate_parameter_Sw(dummy, TRANS, CALC_INFO=None):
     molec_id = TRANS['molec_id']
     local_iso_id = TRANS['local_iso_id']
     nu = TRANS['nu']
@@ -5425,28 +5325,28 @@ def calculate_parameter_Sw(dummy,TRANS,CALC_INFO=None):
     SigmaT = TRANS['SigmaT']
     SigmaTref = TRANS['SigmaT_ref']
     elower = TRANS['elower']
-    Sw_calc = EnvironmentDependency_Intensity(sw,T,Tref,SigmaT,SigmaTref,elower,nu)
+    Sw_calc = EnvironmentDependency_Intensity(sw, T, Tref, SigmaT, SigmaTref, elower, nu)
     if 'Abundances' in TRANS:
-        Sw_calc *= TRANS['Abundances'][(molec_id,local_iso_id)]/abundance(molec_id,local_iso_id)
+        Sw_calc *= TRANS['Abundances'][(molec_id, local_iso_id)]/abundance(molec_id, local_iso_id)
     if type(CALC_INFO) is dict:
         CALC_INFO['Sw'] = {
-            'value':Sw_calc,
+            'value':Sw_calc, 
             'mixture':{
                 'generic': {
                     'args': {
-                        'SigmaT':{'value':SigmaT,'source':'<calc>'},
-                        'SigmaT_ref':{'value':SigmaTref,'source':'<calc>'},
-                        'elower':{'value':elower,'source':'elower'},
-                        'nu':{'value':nu,'source':'nu'},
+                        'SigmaT':{'value':SigmaT, 'source':'<calc>'}, 
+                        'SigmaT_ref':{'value':SigmaTref, 'source':'<calc>'}, 
+                        'elower':{'value':elower, 'source':'elower'}, 
+                        'nu':{'value':nu, 'source':'nu'}, 
                     }
                 }
             }
         }
 
     return Sw_calc
-    #return {'value':TRANS['sw'],'info':{}} # SHOULD BE REDONE TO INCLUDE THE ABUNDANCES OF RADIATIVELY ACTIVE SPECIES
+    #return {'value':TRANS['sw'], 'info':{}} # SHOULD BE REDONE TO INCLUDE THE ABUNDANCES OF RADIATIVELY ACTIVE SPECIES
     
-def calculate_parameter_GammaD(dummy,TRANS,CALC_INFO=None):
+def calculate_parameter_GammaD(dummy, TRANS, CALC_INFO=None):
     """
     Calculate Doppler broadening HWHM for given environment.
     """
@@ -5457,7 +5357,7 @@ def calculate_parameter_GammaD(dummy,TRANS,CALC_INFO=None):
     IsoNumberDB = TRANS['local_iso_id']
     LineCenterDB = TRANS['nu']
     cMassMol = 1.66053873e-27
-    molmass = molecularMass(MoleculeNumberDB,IsoNumberDB)
+    molmass = molecularMass(MoleculeNumberDB, IsoNumberDB)
     fSqrtMass = sqrt(molmass)
     cc_ = 2.99792458e8
     cBolts_ = 1.3806503e-23
@@ -5469,48 +5369,48 @@ def calculate_parameter_GammaD(dummy,TRANS,CALC_INFO=None):
     
     if type(CALC_INFO) is dict: 
         CALC_INFO['GammaD'] = {
-            'value':GammaD,
+            'value':GammaD, 
             'mixture':{
                 'generic':{
                     'args':{
-                        'T': {'value':T},
-                        'p': {'value':p},
-                        'molmass': {'value':molmass,'source':'<calc>'}
+                        'T': {'value':T}, 
+                        'p': {'value':p}, 
+                        'molmass': {'value':molmass, 'source':'<calc>'}
                     }
                 }
             }
         }
     return GammaD
     
-def calculate_parameter_Gamma0(envdep_presets,TRANS,CALC_INFO=None):
+def calculate_parameter_Gamma0(envdep_presets, TRANS, CALC_INFO=None):
     """
     Calculate pressure-induced broadening HWHM for given Environment and TRANS.
     """
     parname = 'Gamma0'
-    return calculate_parameter_PI(parname,envdep_presets,TRANS,CALC_INFO)
+    return calculate_parameter_PI(parname, envdep_presets, TRANS, CALC_INFO)
 
-def calculate_parameter_Delta0(envdep_presets,TRANS,CALC_INFO=None):
+def calculate_parameter_Delta0(envdep_presets, TRANS, CALC_INFO=None):
     """
     Calculate pressure-induced line shift for given Environment and TRANS.
     """
     parname = 'Delta0'
-    return calculate_parameter_PI(parname,envdep_presets,TRANS,CALC_INFO)
+    return calculate_parameter_PI(parname, envdep_presets, TRANS, CALC_INFO)
 
-def calculate_parameter_Gamma2(envdep_presets,TRANS,CALC_INFO=None):
+def calculate_parameter_Gamma2(envdep_presets, TRANS, CALC_INFO=None):
     """
     Calculate speed dependence of pressure-induced broadening HWHM for given Environment and TRANS.
     """
     parname = 'Gamma2'
-    return calculate_parameter_PI(parname,envdep_presets,TRANS,CALC_INFO)
+    return calculate_parameter_PI(parname, envdep_presets, TRANS, CALC_INFO)
 
-def calculate_parameter_Delta2(envdep_presets,TRANS,CALC_INFO=None):
+def calculate_parameter_Delta2(envdep_presets, TRANS, CALC_INFO=None):
     """
     Calculate speed dependence of pressure-induced line shift for given Environment and TRANS.
     """
     parname = 'Delta2'
-    return calculate_parameter_PI(parname,envdep_presets,TRANS,CALC_INFO)
+    return calculate_parameter_PI(parname, envdep_presets, TRANS, CALC_INFO)
 
-def calculate_parameter_Eta(envdep_presets,TRANS,CALC_INFO=None):
+def calculate_parameter_Eta(envdep_presets, TRANS, CALC_INFO=None):
     """
     Calculate correlation parameter for given Environment and TRANS.
     """
@@ -5524,22 +5424,22 @@ def calculate_parameter_Eta(envdep_presets,TRANS,CALC_INFO=None):
     Eta_denom = Gamma2-1j*Delta2
     for species in Diluent:
         abun = Diluent[species]
-        EtaDB = TRANS.get('eta_HT_%s'%species,0)
+        EtaDB = TRANS.get('eta_HT_%s'%species, 0)
         Gamma2T = CALC_INFO['Gamma2']['mixture'][species]['value']
         Delta2T = CALC_INFO['Delta2']['mixture'][species]['value']
         Eta_species = EtaDB*abun*(Gamma2T-1j*Delta2T)
         if Eta_denom!=0: Eta_species/=Eta_denom
         CALC_INFO['Eta']['mixture'][species] = {
-            'value':Eta_species,
+            'value':Eta_species, 
             'args':{
-                'Gamma0':{'value':Gamma0,'source':'<calc>'},
-                'Delta0':{'value':Delta0,'source':'<calc>'},
+                'Gamma0':{'value':Gamma0, 'source':'<calc>'}, 
+                'Delta0':{'value':Delta0, 'source':'<calc>'}, 
             }
         }
         Eta += Eta_species
     return Eta
 
-def calculate_parameter_NuVC(envdep_presets,TRANS,CALC_INFO=None):
+def calculate_parameter_NuVC(envdep_presets, TRANS, CALC_INFO=None):
     """
     Calculate velocity collision frequency for given Environment and TRANS.
     """
@@ -5559,21 +5459,21 @@ def calculate_parameter_NuVC(envdep_presets,TRANS,CALC_INFO=None):
         abun = Diluent[species]
 
         # 1st NuVC component: weighted sum of NuVC_i
-        NuVCDB = TRANS.get('nu_HT_%s'%species,0)
-        KappaDB = TRANS.get('kappa_HT_%s'%species,0)
+        NuVCDB = TRANS.get('nu_HT_%s'%species, 0)
+        KappaDB = TRANS.get('kappa_HT_%s'%species, 0)
         NuVC += NuVCDB*(Tref/T)**KappaDB*p
 
         # 2nd NuVC component (with negative sign)
         Gamma0T = CALC_INFO['Gamma0']['mixture'][species]['value']
         Delta0T = CALC_INFO['Delta0']['mixture'][species]['value']
-        EtaDB = TRANS.get('eta_HT_%s'%species,0)
+        EtaDB = TRANS.get('eta_HT_%s'%species, 0)
         NuVC -= EtaDB*abun*(Gamma0T-1j*Delta0T)
 
         CALC_INFO['NuVC']['mixture'][species] = {
-            'value':NuVC_species,
+            'value':NuVC_species, 
             'args':{
-                'Gamma0':{'value':Gamma0,'source':'<calc>'},
-                'Delta0':{'value':Delta0,'source':'<calc>'},
+                'Gamma0':{'value':Gamma0, 'source':'<calc>'}, 
+                'Delta0':{'value':Delta0, 'source':'<calc>'}, 
             }
         }
 
@@ -5581,147 +5481,147 @@ def calculate_parameter_NuVC(envdep_presets,TRANS,CALC_INFO=None):
 
     return NuVC
     
-def calculate_parameter_YRosen(envdep_presets,TRANS,CALC_INFO=None):
+def calculate_parameter_YRosen(envdep_presets, TRANS, CALC_INFO=None):
     """
     Calculate pressure-induced 1st order line mixing parameter for given Environment and TRANS.
     """
     parname = 'YRosen'
-    return calculate_parameter_PI(parname,envdep_presets,TRANS,CALC_INFO)
+    return calculate_parameter_PI(parname, envdep_presets, TRANS, CALC_INFO)
     
-def calculateProfileParameters(envdep_presets,parameters,TRANS,CALC_INFO=None,exclude=None):
+def calculateProfileParameters(envdep_presets, parameters, TRANS, CALC_INFO=None, exclude=None):
     """
     Get the Line context on the input, and return the dictionary with the "abstract" parameters.
     """
     PARAMS = {}
-    for pname,pfunc in parameters:
+    for pname, pfunc in parameters:
         if exclude and pname in exclude:
             pval_default = 0
             PARAMS[pname] = pval_default # don't calculate parameter if it is present in exclude set
             if type(CALC_INFO) is dict:
                 CALC_INFO[pname] = {
-                    'value': pval_default,
+                    'value': pval_default, 
                     'status': 'excluded'
                 }
         else:
-            PARAMS[pname] = pfunc(envdep_presets,TRANS=TRANS,CALC_INFO=CALC_INFO)
+            PARAMS[pname] = pfunc(envdep_presets, TRANS=TRANS, CALC_INFO=CALC_INFO)
     return PARAMS
     
-def calculateProfileParametersDoppler(TRANS,CALC_INFO=None,exclude=None):
+def calculateProfileParametersDoppler(TRANS, CALC_INFO=None, exclude=None):
     """
     Get values for abstract profile parameters for Doppler profile.
     """
-    envdep_presets = [('Doppler','default')]
+    envdep_presets = [('Doppler', 'default')]
     parameters = [
-        ('Nu', calculate_parameter_Nu),
-        ('Sw', calculate_parameter_Sw),
-        ('GammaD', calculate_parameter_GammaD),
+        ('Nu', calculate_parameter_Nu), 
+        ('Sw', calculate_parameter_Sw), 
+        ('GammaD', calculate_parameter_GammaD), 
     ]
-    return calculateProfileParameters(envdep_presets,parameters,CALC_INFO=CALC_INFO,TRANS=TRANS,exclude=exclude)
+    return calculateProfileParameters(envdep_presets, parameters, CALC_INFO=CALC_INFO, TRANS=TRANS, exclude=exclude)
     
-def calculateProfileParametersLorentz(TRANS,CALC_INFO=None,exclude=None):
+def calculateProfileParametersLorentz(TRANS, CALC_INFO=None, exclude=None):
     """
     Get values for abstract profile parameters for Lorentz profile.
     """
-    envdep_presets = [('Lorentz','default')]
+    envdep_presets = [('Lorentz', 'default')]
     parameters = [
-        ('Nu', calculate_parameter_Nu),
-        ('Sw', calculate_parameter_Sw),
-        ('Gamma0', calculate_parameter_Gamma0),
-        ('Delta0', calculate_parameter_Delta0),
-        ('YRosen', calculate_parameter_YRosen),
+        ('Nu', calculate_parameter_Nu), 
+        ('Sw', calculate_parameter_Sw), 
+        ('Gamma0', calculate_parameter_Gamma0), 
+        ('Delta0', calculate_parameter_Delta0), 
+        ('YRosen', calculate_parameter_YRosen), 
     ]
-    return calculateProfileParameters(envdep_presets,parameters,CALC_INFO=CALC_INFO,TRANS=TRANS,exclude=exclude)
+    return calculateProfileParameters(envdep_presets, parameters, CALC_INFO=CALC_INFO, TRANS=TRANS, exclude=exclude)
     
-def calculateProfileParametersVoigt(TRANS,CALC_INFO=None,exclude=None):
+def calculateProfileParametersVoigt(TRANS, CALC_INFO=None, exclude=None):
     """
     Get values for abstract profile parameters for Voigt profile.
     """
-    envdep_presets = [('Voigt','default')]
+    envdep_presets = [('Voigt', 'default')]
     parameters = [
-        ('Nu', calculate_parameter_Nu),
-        ('Sw', calculate_parameter_Sw),
-        ('GammaD', calculate_parameter_GammaD),
-        ('Gamma0', calculate_parameter_Gamma0),
-        ('Delta0', calculate_parameter_Delta0),
-        ('YRosen', calculate_parameter_YRosen),
+        ('Nu', calculate_parameter_Nu), 
+        ('Sw', calculate_parameter_Sw), 
+        ('GammaD', calculate_parameter_GammaD), 
+        ('Gamma0', calculate_parameter_Gamma0), 
+        ('Delta0', calculate_parameter_Delta0), 
+        ('YRosen', calculate_parameter_YRosen), 
     ]
-    return calculateProfileParameters(envdep_presets,parameters,CALC_INFO=CALC_INFO,TRANS=TRANS,exclude=exclude)
+    return calculateProfileParameters(envdep_presets, parameters, CALC_INFO=CALC_INFO, TRANS=TRANS, exclude=exclude)
 
-def calculateProfileParametersSDVoigt(TRANS,CALC_INFO=None,exclude=None):
+def calculateProfileParametersSDVoigt(TRANS, CALC_INFO=None, exclude=None):
     """
     Get values for abstract profile parameters for SDVoigt profile.
     """
     envdep_presets = [
-        ('SDVoigt','default'),
-        ('SDVoigt','dimensionless'),
-        ('Voigt','default')
+        ('SDVoigt', 'default'), 
+        ('SDVoigt', 'dimensionless'), 
+        ('Voigt', 'default')
         ]
     parameters = [
-        ('Nu', calculate_parameter_Nu),
-        ('Sw', calculate_parameter_Sw),
-        ('GammaD', calculate_parameter_GammaD),
-        ('Gamma0', calculate_parameter_Gamma0),
-        ('Delta0', calculate_parameter_Delta0),
-        ('Gamma2', calculate_parameter_Gamma2),
-        ('Delta2', calculate_parameter_Delta2),
+        ('Nu', calculate_parameter_Nu), 
+        ('Sw', calculate_parameter_Sw), 
+        ('GammaD', calculate_parameter_GammaD), 
+        ('Gamma0', calculate_parameter_Gamma0), 
+        ('Delta0', calculate_parameter_Delta0), 
+        ('Gamma2', calculate_parameter_Gamma2), 
+        ('Delta2', calculate_parameter_Delta2), 
         ('YRosen', calculate_parameter_YRosen),        
     ]
-    return calculateProfileParameters(envdep_presets,parameters,CALC_INFO=CALC_INFO,TRANS=TRANS,exclude=exclude)
+    return calculateProfileParameters(envdep_presets, parameters, CALC_INFO=CALC_INFO, TRANS=TRANS, exclude=exclude)
 
-def calculateProfileParametersHT(TRANS,CALC_INFO=None,exclude=None):
+def calculateProfileParametersHT(TRANS, CALC_INFO=None, exclude=None):
     """
     Get values for abstract profile parameters for HT profile.
     """
     envdep_presets = [
-        ('HT','multitemp'),
-        ('HT','default'),
-        ('Voigt','default')
+        ('HT', 'multitemp'), 
+        ('HT', 'default'), 
+        ('Voigt', 'default')
         ]
     parameters = [
-        ('Nu', calculate_parameter_Nu),
-        ('Sw', calculate_parameter_Sw),
-        ('GammaD', calculate_parameter_GammaD),
-        ('Gamma0', calculate_parameter_Gamma0),
-        ('Delta0', calculate_parameter_Delta0),
-        ('Gamma2', calculate_parameter_Gamma2),
-        ('Delta2', calculate_parameter_Delta2),
-        ('Eta', calculate_parameter_Eta),
-        ('NuVC', calculate_parameter_NuVC),
-        ('YRosen', calculate_parameter_YRosen),
+        ('Nu', calculate_parameter_Nu), 
+        ('Sw', calculate_parameter_Sw), 
+        ('GammaD', calculate_parameter_GammaD), 
+        ('Gamma0', calculate_parameter_Gamma0), 
+        ('Delta0', calculate_parameter_Delta0), 
+        ('Gamma2', calculate_parameter_Gamma2), 
+        ('Delta2', calculate_parameter_Delta2), 
+        ('Eta', calculate_parameter_Eta), 
+        ('NuVC', calculate_parameter_NuVC), 
+        ('YRosen', calculate_parameter_YRosen), 
     ]
-    return calculateProfileParameters(envdep_presets,parameters,CALC_INFO=CALC_INFO,TRANS=TRANS,exclude=exclude)
+    return calculateProfileParameters(envdep_presets, parameters, CALC_INFO=CALC_INFO, TRANS=TRANS, exclude=exclude)
     
-def calculateProfileParametersFullPriority(TRANS,CALC_INFO=None,exclude=None):
+def calculateProfileParametersFullPriority(TRANS, CALC_INFO=None, exclude=None):
     """
     Get the Line context on the input, and return the dictionary with the "abstract" parameters.
     """
     envdep_presets = [
-        ('HT','multitemp'),
-        ('HT','default'),
-        ('SDVoigt','default'),
-        ('Voigt','default')
+        ('HT', 'multitemp'), 
+        ('HT', 'default'), 
+        ('SDVoigt', 'default'), 
+        ('Voigt', 'default')
         ]
     parameters = [
-        ('Nu', calculate_parameter_Nu),
-        ('Sw', calculate_parameter_Sw),
-        ('GammaD', calculate_parameter_GammaD),
-        ('Gamma0', calculate_parameter_Gamma0),
-        ('Delta0', calculate_parameter_Delta0),
-        ('Gamma2', calculate_parameter_Gamma2),
-        ('Delta2', calculate_parameter_Delta2),
-        ('Eta', calculate_parameter_Eta),
-        ('NuVC', calculate_parameter_NuVC),
-        ('YRosen', calculate_parameter_YRosen),
+        ('Nu', calculate_parameter_Nu), 
+        ('Sw', calculate_parameter_Sw), 
+        ('GammaD', calculate_parameter_GammaD), 
+        ('Gamma0', calculate_parameter_Gamma0), 
+        ('Delta0', calculate_parameter_Delta0), 
+        ('Gamma2', calculate_parameter_Gamma2), 
+        ('Delta2', calculate_parameter_Delta2), 
+        ('Eta', calculate_parameter_Eta), 
+        ('NuVC', calculate_parameter_NuVC), 
+        ('YRosen', calculate_parameter_YRosen), 
     ]
-    return calculateProfileParameters(envdep_presets,parameters,CALC_INFO=CALC_INFO,TRANS=TRANS,exclude=exclude)
+    return calculateProfileParameters(envdep_presets, parameters, CALC_INFO=CALC_INFO, TRANS=TRANS, exclude=exclude)
 
 VARIABLES['abscoef_debug'] = True
 
 # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 # ENVIRONMENT DEPENDENCES (GENERIC)
 
-def environGetArguments(abstract_parnames,lookup_cases,
-        aux_args,TRANS):
+def environGetArguments(abstract_parnames, lookup_cases, 
+        aux_args, TRANS):
     """
     Get the environment-dependent parameter names, along with auxiliary arguments 
     to use in the environment dependence function.
@@ -5772,19 +5672,19 @@ def environGetArguments(abstract_parnames,lookup_cases,
                 flag = True
                 
         if not flag: 
-            return INFO,ARGS
+            return INFO, ARGS
         
     raise Exception('not found in DB: %s'%params_not_found)
 
 # STANDARD ENVIRONMENT DEPENDENCE FUNCTIONS    
     
-def environDependenceFn_PowerLaw(Par_ref,TempRatioPower,T,T_ref,p,p_ref):
+def environDependenceFn_PowerLaw(Par_ref, TempRatioPower, T, T_ref, p, p_ref):
     """
     Standard single power law environment dependence.
     """
     return Par_ref * ( T_ref/T )**TempRatioPower * p/p_ref
     
-def environDependenceFn_LinearLaw(Par_ref,Coef,T,T_ref,p,p_ref):
+def environDependenceFn_LinearLaw(Par_ref, Coef, T, T_ref, p, p_ref):
     """
     Standard linear law environment dependence.    
     """ 
@@ -5794,88 +5694,88 @@ def environDependenceFn_LinearLaw(Par_ref,Coef,T,T_ref,p,p_ref):
     
 # Gamma0 =>
     
-def environGetArguments_Lorentz_Gamma0_default(broadener,TRANS):
+def environGetArguments_Lorentz_Gamma0_default(broadener, TRANS):
     """
     Argument selector for the environment dependence function for Gamma0.
     """
     T_ref = 296.0; p_ref = 1.0
-    abstract_args = ['Par_ref','TempRatioPower']
+    abstract_args = ['Par_ref', 'TempRatioPower']
     lookup_cases = [
         {
-            '__case__': 'Lorentz 1',
+            '__case__': 'Lorentz 1', 
             'Par_ref':{
                 'name': 'gamma_%s'%broadener,                
-            },
+            }, 
             'TempRatioPower':{
-                'name': 'n_%s'%broadener,
-            },
-        },
+                'name': 'n_%s'%broadener, 
+            }, 
+        }, 
         {
-            '__case__': 'Lorentz 2',
+            '__case__': 'Lorentz 2', 
             'Par_ref':{
-                'name': 'gamma_%s'%broadener,
-            },
+                'name': 'gamma_%s'%broadener, 
+            }, 
             'TempRatioPower':{
-                'name': 'n_air',
-            },
-        },
+                'name': 'n_air', 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)        
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
     
 # Delta0 =>    
     
-def environGetArguments_Lorentz_Delta0_default(broadener,TRANS):
+def environGetArguments_Lorentz_Delta0_default(broadener, TRANS):
     """
     Argument selector for the environment dependence function for Delta0.
     """
     T_ref = 296.0; p_ref = 1.0
-    abstract_args = ['Par_ref','Coef']
+    abstract_args = ['Par_ref', 'Coef']
     lookup_cases = [
         {
-            '__case__': 'Lorentz 1',
+            '__case__': 'Lorentz 1', 
             'Par_ref':{
-                'name': 'delta_%s'%broadener,
-                'default': 0,
-            },
+                'name': 'delta_%s'%broadener, 
+                'default': 0, 
+            }, 
             'Coef':{
-                'name': 'deltap_%s'%broadener,
-                'default': 0,
-            },
-        },
+                'name': 'deltap_%s'%broadener, 
+                'default': 0, 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)        
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
 
 # YRosen =>
 
-def environGetArguments_Lorentz_YRosen_default(broadener,TRANS):
+def environGetArguments_Lorentz_YRosen_default(broadener, TRANS):
     """
     Argument selector for the environment dependence function for YRosen.
     """
     T_ref = 296.0; p_ref = 1.0
-    abstract_args = ['Par_ref','TempRatioPower']
+    abstract_args = ['Par_ref', 'TempRatioPower']
     lookup_cases = [
         {
-            '__case__': 'Lorentz 1',
+            '__case__': 'Lorentz 1', 
             'Par_ref':{
                 'name': 'y_%s'%broadener,  
-                'default': 0,
-            },
+                'default': 0, 
+            }, 
             'TempRatioPower':{
-                'name': 'n_y_%s'%broadener,
-                'default': 0,
-            },
-        },
+                'name': 'n_y_%s'%broadener, 
+                'default': 0, 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)        
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
         
 # ENVIRONMENT DEPENDENCES FOR VOIGT PROFILE
     
@@ -5885,168 +5785,168 @@ def environGetArguments_Lorentz_YRosen_default(broadener,TRANS):
 
 # Gamma0 =>
     
-def environGetArguments_SDVoigt_Gamma0_default(broadener,TRANS):
+def environGetArguments_SDVoigt_Gamma0_default(broadener, TRANS):
     """
     Argument selector for the environment dependence function for Gamma0.
     """
     T_ref = 296.0; p_ref = 1.0
-    abstract_args = ['Par_ref','TempRatioPower']
+    abstract_args = ['Par_ref', 'TempRatioPower']
     lookup_cases = [
         {
-            '__case__': 'SDVoigt 1',
+            '__case__': 'SDVoigt 1', 
             'Par_ref':{
-                'name': 'gamma_SDV_0_%s_%d'%(broadener,T_ref),
-            },
+                'name': 'gamma_SDV_0_%s_%d'%(broadener, T_ref), 
+            }, 
             'TempRatioPower':{
-                'name': 'n_SDV_%s_%d'%(broadener,T_ref),
-                'default': 0,
-            },
-        },
+                'name': 'n_SDV_%s_%d'%(broadener, T_ref), 
+                'default': 0, 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)        
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
     
 # Delta0 =>
         
-def environGetArguments_SDVoigt_Delta0_default(broadener,TRANS):
+def environGetArguments_SDVoigt_Delta0_default(broadener, TRANS):
     """
     Argument selector for the environment dependence function for Delta0.
     """
     T_ref = 296.0; p_ref = 1.0
-    abstract_args = ['Par_ref','Coef']
+    abstract_args = ['Par_ref', 'Coef']
     lookup_cases = [
         {
-            '__case__': 'SDVoigt 1',
+            '__case__': 'SDVoigt 1', 
             'Par_ref':{
-                'name': 'delta_SDV_0_%s_%d'%(broadener,T_ref),
-            },
+                'name': 'delta_SDV_0_%s_%d'%(broadener, T_ref), 
+            }, 
             'Coef':{
-                'name': 'deltap_SDV_%s_%d'%(broadener,T_ref),
-            },
-        },
+                'name': 'deltap_SDV_%s_%d'%(broadener, T_ref), 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)        
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
 
 # Gamma2 =>
     
-def environGetArguments_SDVoigt_Gamma2_default(broadener,TRANS):
+def environGetArguments_SDVoigt_Gamma2_default(broadener, TRANS):
     """
     Argument selector for the environment dependence function for Gamma2.
     """
     T_ref = 296.0; p_ref = 1.0
-    abstract_args = ['Par_ref','TempRatioPower']
+    abstract_args = ['Par_ref', 'TempRatioPower']
     lookup_cases = [
         {
-            '__case__': 'SDVoigt 1',
+            '__case__': 'SDVoigt 1', 
             'Par_ref':{
-                'name': 'gamma_SDV_2_%s_%d'%(broadener,T_ref),
-            },
+                'name': 'gamma_SDV_2_%s_%d'%(broadener, T_ref), 
+            }, 
             'TempRatioPower':{
-                'name': 'n_gamma_SDV_2_%s_%d'%(broadener,T_ref),
-                'default': 0,
-            },
-        },
+                'name': 'n_gamma_SDV_2_%s_%d'%(broadener, T_ref), 
+                'default': 0, 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)        
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
 
-def environGetArguments_SDVoigt_Gamma2_dimensionless(broadener,TRANS): # avoid this;
+def environGetArguments_SDVoigt_Gamma2_dimensionless(broadener, TRANS): # avoid this;
     """
     Argument selector for the environment dependence function for Gamma2.
     """
     T_ref = 296.0; p_ref = 1.0
-    abstract_args = ['gamma0','sd','n']
+    abstract_args = ['gamma0', 'sd', 'n']
     lookup_cases = [
         {
-            '__case__': 'SDVoigt 1',
+            '__case__': 'SDVoigt 1', 
             'gamma0':{
-                'name': 'gamma_%s'%broadener,
-            },
+                'name': 'gamma_%s'%broadener, 
+            }, 
             'sd':{
-                'name': 'SD_%s'%broadener,
-            },
+                'name': 'SD_%s'%broadener, 
+            }, 
             'n':{
-                'name': 'n_SD_%s'%broadener,
-                'default': 0,
-            },
-        },
+                'name': 'n_SD_%s'%broadener, 
+                'default': 0, 
+            }, 
+        }, 
         {
-            '__case__': 'SDVoigt 2',
+            '__case__': 'SDVoigt 2', 
             'gamma0':{
-                'name': 'gamma_%s'%broadener,
-            },
+                'name': 'gamma_%s'%broadener, 
+            }, 
             'sd':{
-                'name': 'SD_%s'%broadener,
-            },
+                'name': 'SD_%s'%broadener, 
+            }, 
             'n':{
-                'name': 'n_SD_air',
-                'default': 0,
-            },
-        },
+                'name': 'n_SD_air', 
+                'default': 0, 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)        
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
         
 # Delta2 =>    
     
-def environGetArguments_SDVoigt_Delta2_default(broadener,TRANS):
+def environGetArguments_SDVoigt_Delta2_default(broadener, TRANS):
     """
     Argument selector for the environment dependence function for Delta0.
     """
     T_ref = 296.0; p_ref = 1.0
-    abstract_args = ['Par_ref','Coef']
+    abstract_args = ['Par_ref', 'Coef']
     lookup_cases = [
         {
-            '__case__': 'SDVoigt 1',
+            '__case__': 'SDVoigt 1', 
             'Par_ref':{
-                'name': 'delta_SDV_2_%s_%d'%(broadener,T_ref),
-                'default': 0,
-            },
+                'name': 'delta_SDV_2_%s_%d'%(broadener, T_ref), 
+                'default': 0, 
+            }, 
             'Coef':{
-                'name': 'deltap_SDV_2_%s_%d'%(broadener,T_ref),
-                'default': 0,
-            },
-        },
+                'name': 'deltap_SDV_2_%s_%d'%(broadener, T_ref), 
+                'default': 0, 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)        
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
 
 # YRosen =>
 
-def environGetArguments_SDVoigt_YRosen_default(broadener,TRANS):
+def environGetArguments_SDVoigt_YRosen_default(broadener, TRANS):
     """
     Argument selector for the environment dependence function for YRosen.
     """
     T_ref = 296.0; p_ref = 1.0
-    abstract_args = ['Par_ref','TempRatioPower']
+    abstract_args = ['Par_ref', 'TempRatioPower']
     lookup_cases = [
         {
-            '__case__': 'Lorentz 1',
+            '__case__': 'Lorentz 1', 
             'Par_ref':{
-                'name': 'Y_SDV_%s_%d'%(broadener,T_ref),
-                'default': 0,
-            },
+                'name': 'Y_SDV_%s_%d'%(broadener, T_ref), 
+                'default': 0, 
+            }, 
             'TempRatioPower':{
-                'name': 'n_Y_SDV_%s_%d'%(broadener,T_ref),
-                'default': 0,
-            },
-        },
+                'name': 'n_Y_SDV_%s_%d'%(broadener, T_ref), 
+                'default': 0, 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)        
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
     
 # ENVIRONMENT DEPENDENCES FOR HT PROFILE
 
@@ -6056,261 +5956,261 @@ def get_T_ref_for_HT_multitemp(T):
     """
     Get the actual reference temperature for the multitemp HT preset.
     """
-    TRanges = [(0,100),(100,200),(200,400),(400,float('inf'))]
-    Trefs = [50.,150.,296.,700.]
-    for TRange,TrefHT in zip(TRanges,Trefs):
+    TRanges = [(0, 100), (100, 200), (200, 400), (400, float('inf'))]
+    Trefs = [50., 150., 296., 700.]
+    for TRange, TrefHT in zip(TRanges, Trefs):
         if T >= TRange[0] and T < TRange[1]:
             break
     return TrefHT
     
-def environGetArguments_HT_Gamma0_default(broadener,TRANS):
+def environGetArguments_HT_Gamma0_default(broadener, TRANS):
     """
     Argument selector for the environment dependence function for Gamma0.
     """
     T_ref = 296.0; p_ref = 1.0
-    abstract_args = ['Par_ref','TempRatioPower']
+    abstract_args = ['Par_ref', 'TempRatioPower']
     lookup_cases = [
         {
-            '__case__': 'HT 1',
+            '__case__': 'HT 1', 
             'Par_ref':{
-                'name': 'gamma_HT_0_%s_%d'%(broadener,T_ref),
-            },
+                'name': 'gamma_HT_0_%s_%d'%(broadener, T_ref), 
+            }, 
             'TempRatioPower':{
-                'name': 'n_HT_%s_%d'%(broadener,T_ref),
-                'default': 0,
-            },
-        },
+                'name': 'n_HT_%s_%d'%(broadener, T_ref), 
+                'default': 0, 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)        
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
     
-def environGetArguments_HT_Gamma0_multitemp(broadener,TRANS): # CUSTOM MULTITEMP PRESET
+def environGetArguments_HT_Gamma0_multitemp(broadener, TRANS): # CUSTOM MULTITEMP PRESET
     """
     Argument selector for the environment dependence function for Gamma0.
     Search parameters for non-standard "Multi-temperature" environment dependence
     used in HITRAN for H2 molecule, as described in Wcislo et al., JQSRT 2016.
     """
     T_ref = get_T_ref_for_HT_multitemp(TRANS['T']); p_ref = 1.0
-    abstract_args = ['Par_ref','TempRatioPower']
+    abstract_args = ['Par_ref', 'TempRatioPower']
     lookup_cases = [
         {
-            '__case__': 'HT 1',
+            '__case__': 'HT 1', 
             'Par_ref':{
-                'name': 'gamma_HT_0_%s_%d'%(broadener,T_ref),
-            },
+                'name': 'gamma_HT_0_%s_%d'%(broadener, T_ref), 
+            }, 
             'TempRatioPower':{
-                'name': 'n_HT_%s_%d'%(broadener,T_ref),
-                'default': 0,
-            },
-        },
+                'name': 'n_HT_%s_%d'%(broadener, T_ref), 
+                'default': 0, 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)        
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
     
 # Delta0 =>
         
-def environGetArguments_HT_Delta0_default(broadener,TRANS):
+def environGetArguments_HT_Delta0_default(broadener, TRANS):
     """
     Argument selector for the environment dependence function for Delta0.
     """
     T_ref = 296.0; p_ref = 1.0
-    abstract_args = ['Par_ref','Coef']
+    abstract_args = ['Par_ref', 'Coef']
     lookup_cases = [
         {
-            '__case__': 'HT 1',
+            '__case__': 'HT 1', 
             'Par_ref':{
-                'name': 'delta_HT_0_%s_%d'%(broadener,T_ref),
-            },
+                'name': 'delta_HT_0_%s_%d'%(broadener, T_ref), 
+            }, 
             'Coef':{
-                'name': 'deltap_HT_%s_%d'%(broadener,T_ref),
-            },
-        },
+                'name': 'deltap_HT_%s_%d'%(broadener, T_ref), 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
 
-def environGetArguments_HT_Delta0_multitemp(broadener,TRANS): # CUSTOM MULTITEMP PRESET
+def environGetArguments_HT_Delta0_multitemp(broadener, TRANS): # CUSTOM MULTITEMP PRESET
     """
     Argument selector for the environment dependence function for Delta0.
     Search parameters for non-standard "Multi-temperature" environment dependence
     used in HITRAN for H2 molecule, as described in Wcislo et al., JQSRT 2016.
     """
     T_ref = get_T_ref_for_HT_multitemp(TRANS['T']); p_ref = 1.0
-    abstract_args = ['Par_ref','Coef']
+    abstract_args = ['Par_ref', 'Coef']
     lookup_cases = [
         {
-            '__case__': 'HT 1',
+            '__case__': 'HT 1', 
             'Par_ref':{
-                'name': 'delta_HT_0_%s_%d'%(broadener,T_ref),
-            },
+                'name': 'delta_HT_0_%s_%d'%(broadener, T_ref), 
+            }, 
             'Coef':{
-                'name': 'deltap_HT_%s_%d'%(broadener,T_ref),
-            },
-        },
+                'name': 'deltap_HT_%s_%d'%(broadener, T_ref), 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
     
 # Gamma2 =>
     
-def environGetArguments_HT_Gamma2_default(broadener,TRANS):
+def environGetArguments_HT_Gamma2_default(broadener, TRANS):
     """
     Argument selector for the environment dependence function for Gamma2.
     """
     T_ref = 296.0; p_ref = 1.0
-    abstract_args = ['Par_ref','TempRatioPower']
+    abstract_args = ['Par_ref', 'TempRatioPower']
     lookup_cases = [
         {
-            '__case__': 'HT 1',
+            '__case__': 'HT 1', 
             'Par_ref':{
-                'name': 'gamma_HT_2_%s_%d'%(broadener,T_ref),
-            },
+                'name': 'gamma_HT_2_%s_%d'%(broadener, T_ref), 
+            }, 
             'TempRatioPower':{
-                'name': 'n_gamma_HT_2_%s_%d'%(broadener,T_ref),
-                'default': 0,
-            },
-        },
+                'name': 'n_gamma_HT_2_%s_%d'%(broadener, T_ref), 
+                'default': 0, 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
 
-def environGetArguments_HT_Gamma2_multitemp(broadener,TRANS): # CUSTOM MULTITEMP PRESET
+def environGetArguments_HT_Gamma2_multitemp(broadener, TRANS): # CUSTOM MULTITEMP PRESET
     """
     Argument selector for the environment dependence function for Gamma2.
     Search parameters for non-standard "Multi-temperature" environment dependence
     used in HITRAN for H2 molecule, as described in Wcislo et al., JQSRT 2016.
     """
     T_ref = get_T_ref_for_HT_multitemp(TRANS['T']); p_ref = 1.0
-    abstract_args = ['Par_ref','TempRatioPower']
+    abstract_args = ['Par_ref', 'TempRatioPower']
     lookup_cases = [
         {
-            '__case__': 'HT 1',
+            '__case__': 'HT 1', 
             'Par_ref':{
-                'name': 'gamma_HT_2_%s_%d'%(broadener,T_ref),
-            },
+                'name': 'gamma_HT_2_%s_%d'%(broadener, T_ref), 
+            }, 
             'TempRatioPower':{
-                'name': 'n_gamma_HT_2_%s_%d'%(broadener,T_ref),
-                'default': 0,
-            },
-        },
+                'name': 'n_gamma_HT_2_%s_%d'%(broadener, T_ref), 
+                'default': 0, 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
     
 # Delta2 =>    
     
-def environGetArguments_HT_Delta2_default(broadener,TRANS):
+def environGetArguments_HT_Delta2_default(broadener, TRANS):
     """
     Argument selector for the environment dependence function for Delta0.
     """
     T_ref = 296.0; p_ref = 1.0
-    abstract_args = ['Par_ref','Coef']
+    abstract_args = ['Par_ref', 'Coef']
     lookup_cases = [
         {
-            '__case__': 'HT 1',
+            '__case__': 'HT 1', 
             'Par_ref':{
-                'name': 'delta_HT_2_%s_%d'%(broadener,T_ref),
-                'default': 0,
-            },
+                'name': 'delta_HT_2_%s_%d'%(broadener, T_ref), 
+                'default': 0, 
+            }, 
             'Coef':{
-                'name': 'deltap_HT_2_%s_%d'%(broadener,T_ref),
-                'default': 0,
-            },
-        },
+                'name': 'deltap_HT_2_%s_%d'%(broadener, T_ref), 
+                'default': 0, 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)        
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
 
-def environGetArguments_HT_Delta2_multitemp(broadener,TRANS): # CUSTOM MULTITEMP PRESET
+def environGetArguments_HT_Delta2_multitemp(broadener, TRANS): # CUSTOM MULTITEMP PRESET
     """
     Argument selector for the environment dependence function for Delta0.
     Search parameters for non-standard "Multi-temperature" environment dependence
     used in HITRAN for H2 molecule, as described in Wcislo et al., JQSRT 2016.
     """
     T_ref = get_T_ref_for_HT_multitemp(TRANS['T']); p_ref = 1.0
-    abstract_args = ['Par_ref','Coef']
+    abstract_args = ['Par_ref', 'Coef']
     lookup_cases = [
         {
-            '__case__': 'HT 1',
+            '__case__': 'HT 1', 
             'Par_ref':{
-                'name': 'delta_HT_2_%s_%d'%(broadener,T_ref),
-                'default': 0,
-            },
+                'name': 'delta_HT_2_%s_%d'%(broadener, T_ref), 
+                'default': 0, 
+            }, 
             'Coef':{
-                'name': 'deltap_HT_2_%s_%d'%(broadener,T_ref),
-                'default': 0,
-            },
-        },
+                'name': 'deltap_HT_2_%s_%d'%(broadener, T_ref), 
+                'default': 0, 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)        
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
     
 # NuVC =>    
     
-def environGetArguments_HT_NuVC_default(broadener,TRANS):
+def environGetArguments_HT_NuVC_default(broadener, TRANS):
     """
     Argument selector for the environment dependence function for NuVC.
     """
     T_ref = 296.0; p_ref = 1.0
-    abstract_args = ['Par_ref','TempRatioPower']
+    abstract_args = ['Par_ref', 'TempRatioPower']
     lookup_cases = [
         {
-            '__case__': 'HT 1',
+            '__case__': 'HT 1', 
             'Par_ref':{
-                'name': 'nu_HT_%s'%broadener,
-            },
+                'name': 'nu_HT_%s'%broadener, 
+            }, 
             'TempRatioPower':{
-                'name': 'kappa_HT_%s'%broadener,
-                'default': 0,
-            },
-        },
+                'name': 'kappa_HT_%s'%broadener, 
+                'default': 0, 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
     
 # YRosen =>
 
-def environGetArguments_HT_YRosen_default(broadener,TRANS):
+def environGetArguments_HT_YRosen_default(broadener, TRANS):
     """
     Argument selector for the environment dependence function for YRosen.
     """
     T_ref = 296.0; p_ref = 1.0
-    abstract_args = ['Par_ref','TempRatioPower']
+    abstract_args = ['Par_ref', 'TempRatioPower']
     lookup_cases = [
         {
-            '__case__': 'Lorentz 1',
+            '__case__': 'Lorentz 1', 
             'Par_ref':{
-                'name': 'Y_HT_%s_%d'%(broadener,T_ref),
-                'default': 0,
-            },
+                'name': 'Y_HT_%s_%d'%(broadener, T_ref), 
+                'default': 0, 
+            }, 
             'TempRatioPower':{
-                'name': 'n_Y_HT_%s_%d'%(broadener,T_ref),
-                'default': 0,
-            },
-        },
+                'name': 'n_Y_HT_%s_%d'%(broadener, T_ref), 
+                'default': 0, 
+            }, 
+        }, 
     ]
-    aux_args = {'T':TRANS['T'],'T_ref':T_ref,'p':TRANS['p'],'p_ref':p_ref}
-    CALC_INFO,ARGS = environGetArguments(abstract_args,
-        lookup_cases,aux_args,TRANS)        
-    return CALC_INFO,ARGS
+    aux_args = {'T':TRANS['T'], 'T_ref':T_ref, 'p':TRANS['p'], 'p_ref':p_ref}
+    CALC_INFO, ARGS = environGetArguments(abstract_args, 
+        lookup_cases, aux_args, TRANS)
+    return CALC_INFO, ARGS
     
 # //////////////////////////////////////////////////////////////////////
 # REGISTRY FOR ENVIRONMENT DEPENDENCES FOR PRESSURE-INDUCED PARAMETERS 
@@ -6321,134 +6221,134 @@ PRESSURE_INDUCED_ENVDEP = {
             'default': { # name of the preset
                 'getargs': environGetArguments_Lorentz_Gamma0_default, # convert abstract environment dependence arguments to the real database parameters
                 'depfunc': environDependenceFn_PowerLaw, # calculate the environment-dependent parameter            
-            },
-        },
+            }, 
+        }, 
         'Delta0': {    
             'default': {
-                'getargs': environGetArguments_Lorentz_Delta0_default,
+                'getargs': environGetArguments_Lorentz_Delta0_default, 
                 'depfunc': environDependenceFn_LinearLaw, 
-            },
-        },
+            }, 
+        }, 
         'YRosen': {    
             'default': {
-                'getargs': environGetArguments_Lorentz_YRosen_default,
+                'getargs': environGetArguments_Lorentz_YRosen_default, 
                 'depfunc': environDependenceFn_LinearLaw, 
-            },
-        },
-    },
+            }, 
+        }, 
+    }, 
     
     'Voigt': {
         'Gamma0': {
             'default': {
-                'getargs': environGetArguments_Lorentz_Gamma0_default,
-                'depfunc': environDependenceFn_PowerLaw,
-            },
-        },
+                'getargs': environGetArguments_Lorentz_Gamma0_default, 
+                'depfunc': environDependenceFn_PowerLaw, 
+            }, 
+        }, 
         'Delta0': {    
             'default': {
-                'getargs': environGetArguments_Lorentz_Delta0_default,
+                'getargs': environGetArguments_Lorentz_Delta0_default, 
                 'depfunc': environDependenceFn_LinearLaw, 
-            },
-        },
+            }, 
+        }, 
         'YRosen': {    
             'default': {
-                'getargs': environGetArguments_Lorentz_YRosen_default,
+                'getargs': environGetArguments_Lorentz_YRosen_default, 
                 'depfunc': environDependenceFn_PowerLaw, 
-            },
-        },
-    },
+            }, 
+        }, 
+    }, 
 
     'SDVoigt': {
         'Gamma0': {
             'default': {
-                'getargs': environGetArguments_SDVoigt_Gamma0_default,
-                'depfunc': environDependenceFn_PowerLaw,
-            },
-        },
+                'getargs': environGetArguments_SDVoigt_Gamma0_default, 
+                'depfunc': environDependenceFn_PowerLaw, 
+            }, 
+        }, 
         'Delta0': {    
             'default': {
-                'getargs': environGetArguments_SDVoigt_Delta0_default,
+                'getargs': environGetArguments_SDVoigt_Delta0_default, 
                 'depfunc': environDependenceFn_LinearLaw, 
-            },
-        },
+            }, 
+        }, 
         'Gamma2': {
             'default': {
-                'getargs': environGetArguments_SDVoigt_Gamma2_default,
-                'depfunc': environDependenceFn_PowerLaw,
-            },
+                'getargs': environGetArguments_SDVoigt_Gamma2_default, 
+                'depfunc': environDependenceFn_PowerLaw, 
+            }, 
             'dimensionless': {
-                'getargs': environGetArguments_SDVoigt_Gamma2_dimensionless,
-                'depfunc': lambda gamma0,sd,n,T,T_ref,p,p_ref: environDependenceFn_PowerLaw(gamma0*sd,n,T,T_ref,p,p_ref),
-            },
-        },
+                'getargs': environGetArguments_SDVoigt_Gamma2_dimensionless, 
+                'depfunc': lambda gamma0, sd, n, T, T_ref, p, p_ref: environDependenceFn_PowerLaw(gamma0*sd, n, T, T_ref, p, p_ref), 
+            }, 
+        }, 
         'Delta2': {    
             'default': {
-                'getargs': environGetArguments_SDVoigt_Delta2_default,
+                'getargs': environGetArguments_SDVoigt_Delta2_default, 
                 'depfunc': environDependenceFn_LinearLaw, 
-            },
-        },
+            }, 
+        }, 
         'YRosen': {    
             'default': {
-                'getargs': environGetArguments_SDVoigt_YRosen_default,
+                'getargs': environGetArguments_SDVoigt_YRosen_default, 
                 'depfunc': environDependenceFn_PowerLaw, 
-            },
-        },
-    },
+            }, 
+        }, 
+    }, 
     
     'HT': {
         'Gamma0': {
             'default': {
-                'getargs': environGetArguments_HT_Gamma0_default,
-                'depfunc': environDependenceFn_PowerLaw,
-            },
+                'getargs': environGetArguments_HT_Gamma0_default, 
+                'depfunc': environDependenceFn_PowerLaw, 
+            }, 
             'multitemp': {
-                'getargs': environGetArguments_HT_Gamma0_multitemp,
-                'depfunc': environDependenceFn_PowerLaw,
-            },
-        },
+                'getargs': environGetArguments_HT_Gamma0_multitemp, 
+                'depfunc': environDependenceFn_PowerLaw, 
+            }, 
+        }, 
         'Delta0': {    
             'default': {
-                'getargs': environGetArguments_HT_Delta0_default,
+                'getargs': environGetArguments_HT_Delta0_default, 
                 'depfunc': environDependenceFn_LinearLaw, 
-            },
+            }, 
             'multitemp': {
-                'getargs': environGetArguments_HT_Delta0_multitemp,
+                'getargs': environGetArguments_HT_Delta0_multitemp, 
                 'depfunc': environDependenceFn_LinearLaw, 
-            },
-        },
+            }, 
+        }, 
         'Gamma2': {
             'default': {
-                'getargs': environGetArguments_HT_Gamma2_default,
-                'depfunc': environDependenceFn_PowerLaw,
-            },
+                'getargs': environGetArguments_HT_Gamma2_default, 
+                'depfunc': environDependenceFn_PowerLaw, 
+            }, 
             'multitemp': {
-                'getargs': environGetArguments_HT_Gamma2_multitemp,
-                'depfunc': environDependenceFn_PowerLaw,
-            },
-        },
+                'getargs': environGetArguments_HT_Gamma2_multitemp, 
+                'depfunc': environDependenceFn_PowerLaw, 
+            }, 
+        }, 
         'Delta2': {
             'default': {
-                'getargs': environGetArguments_HT_Delta2_default,
+                'getargs': environGetArguments_HT_Delta2_default, 
                 'depfunc': environDependenceFn_LinearLaw, 
-            },
+            }, 
             'multitemp': {
-                'getargs': environGetArguments_HT_Delta2_multitemp,
+                'getargs': environGetArguments_HT_Delta2_multitemp, 
                 'depfunc': environDependenceFn_LinearLaw, 
-            },
-        },
+            }, 
+        }, 
         'NuVC': {    
             'default': {
-                'getargs': environGetArguments_HT_NuVC_default,
+                'getargs': environGetArguments_HT_NuVC_default, 
                 'depfunc': environDependenceFn_PowerLaw, 
-            },
-        },
+            }, 
+        }, 
         'YRosen': {    
             'default': {
-                'getargs': environGetArguments_HT_YRosen_default,
+                'getargs': environGetArguments_HT_YRosen_default, 
                 'depfunc': environDependenceFn_PowerLaw, 
-            },
-        },
-    },
+            }, 
+        }, 
+    }, 
     
 }
 
@@ -6457,8 +6357,8 @@ PRESSURE_INDUCED_ENVDEP = {
 # OLD TEMPERATURE AND PRESSURE DEPENDENCES MOSTLY FOR BACKWARDS COMPATIBILITY
 
 # temperature dependence for intensities (HITRAN)
-def EnvironmentDependency_Intensity(LineIntensityRef,T,Tref,SigmaT,SigmaTref,
-                                    LowerStateEnergy,LineCenter):
+def EnvironmentDependency_Intensity(LineIntensityRef, T, Tref, SigmaT, SigmaTref, 
+                                    LowerStateEnergy, LineCenter):
     const = __FloatType__(1.4388028496642257)
     ch = exp(-const*LowerStateEnergy/T)*(1-exp(-const*LineCenter/T))
     zn = exp(-const*LowerStateEnergy/Tref)*(1-exp(-const*LineCenter/Tref))
@@ -6466,34 +6366,34 @@ def EnvironmentDependency_Intensity(LineIntensityRef,T,Tref,SigmaT,SigmaTref,
     return LineIntensity
 
 # environmental dependence for GammaD (HTP, Voigt)
-def EnvironmentDependency_GammaD(GammaD_ref,T,Tref):
+def EnvironmentDependency_GammaD(GammaD_ref, T, Tref):
     # Doppler parameters do not depend on pressure!
     return GammaD_ref*sqrt(T/Tref)
 
 # environmental dependence for Gamma0 (HTP, Voigt)
-def EnvironmentDependency_Gamma0(Gamma0_ref,T,Tref,p,pref,TempRatioPower):
+def EnvironmentDependency_Gamma0(Gamma0_ref, T, Tref, p, pref, TempRatioPower):
     return Gamma0_ref*p/pref*(Tref/T)**TempRatioPower
 
 # environmental dependence for Gamma2 (HTP)
-def EnvironmentDependency_Gamma2(Gamma2_ref,T,Tref,p,pref,TempRatioPower):
+def EnvironmentDependency_Gamma2(Gamma2_ref, T, Tref, p, pref, TempRatioPower):
     return Gamma2_ref*p/pref*(Tref/T)**TempRatioPower
     #return Gamma2_ref*p/pref
 
 # environmental dependence for Delta0 (HTP)
-def EnvironmentDependency_Delta0(Delta0_ref,Deltap,T,Tref,p,pref):
+def EnvironmentDependency_Delta0(Delta0_ref, Deltap, T, Tref, p, pref):
     return (Delta0_ref + Deltap*(T-Tref))*p/pref
 
 # environmental dependence for Delta2 (HTP)
-def EnvironmentDependency_Delta2(Delta2_ref,T,Tref,p,pref,TempRatioPower):
+def EnvironmentDependency_Delta2(Delta2_ref, T, Tref, p, pref, TempRatioPower):
     return Delta2_ref*p/pref*(Tref/T)**TempRatioPower
     #return Delta2_ref*p/pref
 
 # environmental dependence for nuVC (HTP)
-def EnvironmentDependency_nuVC(nuVC_ref,Kappa,T,Tref,p,pref):
+def EnvironmentDependency_nuVC(nuVC_ref, Kappa, T, Tref, p, pref):
     return nuVC_ref*(Tref/T)**Kappa*p/pref
 
 # environmental dependence for nuVC (HTP)
-def EnvironmentDependency_Eta(EtaDB,Gamma0,Shift0,Diluent,C):  # C=>CONTEXT
+def EnvironmentDependency_Eta(EtaDB, Gamma0, Shift0, Diluent, C):  # C=>CONTEXT
     Eta_Numer = 0
     for species in Diluent:
         abun = Diluent[species]
@@ -6524,18 +6424,18 @@ DefaultOmegaWingHW = 50. # cm-1    HOTW default
 
 # check and argument for being a tuple or list
 # this is connected with a "bug" that in Python
-# (val) is not a tuple, but (val,) is a tuple
+# (val) is not a tuple, but (val, ) is a tuple
 def listOfTuples(a):
-    if type(a) not in set([list,tuple]):
+    if type(a) not in set([list, tuple]):
         a = [a]
     return a
 
 
 # determine default parameters from those which are passed to absorptionCoefficient_...
-def getDefaultValuesForXsect(Components,SourceTables,Environment,OmegaRange,
-                             OmegaStep,OmegaWing,IntensityThreshold,Format):
+def getDefaultValuesForXsect(Components, SourceTables, Environment, OmegaRange, 
+                             OmegaStep, OmegaWing, IntensityThreshold, Format):
     if SourceTables[0] == None:
-        SourceTables = ['__BUFFER__',]
+        SourceTables = ['__BUFFER__', ]
     if Environment == None:
         Environment = {'T':296., 'p':1.}
     if Components == [None]:
@@ -6548,10 +6448,10 @@ def getDefaultValuesForXsect(Components,SourceTables,Environment,OmegaRange,
             iso_ids = LOCAL_TABLE_CACHE[TableName]['data']['local_iso_id']
             if len(mol_ids) != len(iso_ids):
                 raise Exception('Lengths if mol_ids and iso_ids differ!')
-            MI_zip = zip(mol_ids,iso_ids)
+            MI_zip = zip(mol_ids, iso_ids)
             MI_zip = set(MI_zip)
-            for mol_id,iso_id in MI_zip:
-                CompDict[(mol_id,iso_id)] = None
+            for mol_id, iso_id in MI_zip:
+                CompDict[(mol_id, iso_id)] = None
         Components = CompDict.keys()
     if OmegaRange == None:
         omega_min = float('inf')
@@ -6564,35 +6464,35 @@ def getDefaultValuesForXsect(Components,SourceTables,Environment,OmegaRange,
                 omega_min = numin
             if omega_max < numax:
                 omega_max = numax
-        OmegaRange = (omega_min,omega_max)
+        OmegaRange = (omega_min, omega_max)
     if OmegaStep == None:
         OmegaStep = 0.01 # cm-1
     if OmegaWing == None:
         OmegaWing = 0.0 # cm-1
     if not Format:
         Format = '%.12f %e'
-    return Components,SourceTables,Environment,OmegaRange,\
-           OmegaStep,OmegaWing,IntensityThreshold,Format
+    return Components, SourceTables, Environment, OmegaRange, \
+           OmegaStep, OmegaWing, IntensityThreshold, Format
 
 ABSCOEF_DOCSTRING_TEMPLATE = \
     """
     INPUT PARAMETERS: 
-        Components:  list of tuples [(M,I,D)], where
-                        M - HITRAN molecule number,
-                        I - HITRAN isotopologue number,
+        Components:  list of tuples [(M, I, D)], where
+                        M - HITRAN molecule number, 
+                        I - HITRAN isotopologue number, 
                         D - relative abundance (optional)
         SourceTables:  list of tables from which to calculate cross-section   (optional)
         partitionFunction:  pointer to partition function (default is PYTIPS) (optional)
         Environment:  dictionary containing thermodynamic parameters.
-                        'p' - pressure in atmospheres,
+                        'p' - pressure in atmospheres, 
                         'T' - temperature in Kelvin
-                        Default={{'p':1.,'T':296.}}
+                        Default={{'p':1., 'T':296.}}
         WavenumberRange:  wavenumber range to consider.
         WavenumberStep:   wavenumber step to consider. 
         WavenumberWing:   absolute wing for calculating a lineshape (in cm-1) 
         WavenumberWingHW:  relative wing for calculating a lineshape (in halfwidths)
         IntensityThreshold:  threshold for intensities
-        Diluent:  specifies broadening mixture composition, e.g. {{'air':0.7,'self':0.3}}
+        Diluent:  specifies broadening mixture composition, e.g. {{'air':0.7, 'self':0.3}}
         HITRAN_units:  use cm2/molecule (True) or cm-1 (False) for absorption coefficient
         File:   write output to file (if specified)
         Format:  c-format of file output (accounts for significant digits in WavenumberStep)
@@ -6607,7 +6507,7 @@ ABSCOEF_DOCSTRING_TEMPLATE = \
         User can vary a wide range of parameters to control a process of calculation.
         The choise of these parameters depends on properties of a particular linelist.
         Default values are a sort of guess which gives a decent precision (on average) 
-        for a reasonable amount of cpu time. To increase calculation accuracy,
+        for a reasonable amount of cpu time. To increase calculation accuracy, 
         user should use a trial and error method.
     ---
     EXAMPLE OF USAGE:
@@ -6615,16 +6515,16 @@ ABSCOEF_DOCSTRING_TEMPLATE = \
     ---
     """     
            
-def absorptionCoefficient_Generic(Components=None,SourceTables=None,partitionFunction=PYTIPS,
-                                  Environment=None,OmegaRange=None,OmegaStep=None,OmegaWing=None,
-                                  IntensityThreshold=DefaultIntensityThreshold,
-                                  OmegaWingHW=DefaultOmegaWingHW,
-                                  GammaL='gamma_air', HITRAN_units=True, LineShift=True,
-                                  File=None, Format=None, OmegaGrid=None,
-                                  WavenumberRange=None,WavenumberStep=None,WavenumberWing=None,
-                                  WavenumberWingHW=None,WavenumberGrid=None,
-                                  Diluent={},LineMixingRosen=False,
-                                  profile=None,calcpars=None,exclude=set(),
+def absorptionCoefficient_Generic(Components=None, SourceTables=None, partitionFunction=PYTIPS, 
+                                  Environment=None, OmegaRange=None, OmegaStep=None, OmegaWing=None, 
+                                  IntensityThreshold=DefaultIntensityThreshold, 
+                                  OmegaWingHW=DefaultOmegaWingHW, 
+                                  GammaL='gamma_air', HITRAN_units=True, LineShift=True, 
+                                  File=None, Format=None, OmegaGrid=None, 
+                                  WavenumberRange=None, WavenumberStep=None, WavenumberWing=None, 
+                                  WavenumberWingHW=None, WavenumberGrid=None, 
+                                  Diluent={}, LineMixingRosen=False, 
+                                  profile=None, calcpars=None, exclude=set(), 
                                   DEBUG=None):
                                                               
     # Throw exception if profile or calcpars are empty.
@@ -6637,9 +6537,9 @@ def absorptionCoefficient_Generic(Components=None,SourceTables=None,partitionFun
         VARIABLES['abscoef_debug'] = False
         
     if not LineMixingRosen: exclude.add('YRosen')
-    if not LineShift: exclude.update({'Delta0','Delta2'})
+    if not LineShift: exclude.update({'Delta0', 'Delta2'})
     
-    # Parameters OmegaRange,OmegaStep,OmegaWing,OmegaWingHW, and OmegaGrid
+    # Parameters OmegaRange, OmegaStep, OmegaWing, OmegaWingHW, and OmegaGrid
     # are deprecated and given for backward compatibility with the older versions.
     if WavenumberRange is not None:  OmegaRange=WavenumberRange
     if WavenumberStep is not None:   OmegaStep=WavenumberStep
@@ -6652,10 +6552,10 @@ def absorptionCoefficient_Generic(Components=None,SourceTables=None,partitionFun
     SourceTables = listOfTuples(SourceTables)
     
     # determine final input values
-    Components,SourceTables,Environment,OmegaRange,OmegaStep,OmegaWing,\
-    IntensityThreshold,Format = \
-       getDefaultValuesForXsect(Components,SourceTables,Environment,OmegaRange,
-                                OmegaStep,OmegaWing,IntensityThreshold,Format)
+    Components, SourceTables, Environment, OmegaRange, OmegaStep, OmegaWing, \
+    IntensityThreshold, Format = \
+       getDefaultValuesForXsect(Components, SourceTables, Environment, OmegaRange, 
+                                OmegaStep, OmegaWing, IntensityThreshold, Format)
     
     # warn user about too large omega step
     if OmegaStep>0.005 and profile is PROFILE_DOPPLER: 
@@ -6665,12 +6565,12 @@ def absorptionCoefficient_Generic(Components=None,SourceTables=None,partitionFun
 
     # get uniform linespace for cross-section
     #number_of_points = (OmegaRange[1]-OmegaRange[0])/OmegaStep + 1
-    #Omegas = linspace(OmegaRange[0],OmegaRange[1],number_of_points)
+    #Omegas = linspace(OmegaRange[0], OmegaRange[1], number_of_points)
     if OmegaGrid is not None:
         Omegas = npsort(OmegaGrid)
     else:
-        #Omegas = arange(OmegaRange[0],OmegaRange[1],OmegaStep)
-        Omegas = arange_(OmegaRange[0],OmegaRange[1],OmegaStep) # fix
+        #Omegas = arange(OmegaRange[0], OmegaRange[1], OmegaStep)
+        Omegas = arange_(OmegaRange[0], OmegaRange[1], OmegaStep) # fix
     number_of_points = len(Omegas)
     Xsect = zeros(number_of_points)
        
@@ -6692,17 +6592,17 @@ def absorptionCoefficient_Generic(Components=None,SourceTables=None,partitionFun
             ni = Component[2]
         else:
             try:
-                ni = ISO[(M,I)][ISO_INDEX['abundance']]
+                ni = ISO[(M, I)][ISO_INDEX['abundance']]
             except KeyError:
-                raise Exception('cannot find component M,I = %d,%d.' % (M,I))
-        ABUNDANCES[(M,I)] = ni
-        NATURAL_ABUNDANCES[(M,I)] = ISO[(M,I)][ISO_INDEX['abundance']]
+                raise Exception('cannot find component M, I = %d, %d.' % (M, I))
+        ABUNDANCES[(M, I)] = ni
+        NATURAL_ABUNDANCES[(M, I)] = ISO[(M, I)][ISO_INDEX['abundance']]
         
     # pre-calculation of volume concentration
     if HITRAN_units:
         factor = __FloatType__(1.0)
     else:
-        factor = volumeConcentration(p,T)
+        factor = volumeConcentration(p, T)
         
     # setup the Diluent variable
     GammaL = GammaL.lower()
@@ -6719,7 +6619,7 @@ def absorptionCoefficient_Generic(Components=None,SourceTables=None,partitionFun
     for key in Diluent:
         val = Diluent[key]
         if val < 0 or val > 1: # if val < 0 and val > 1:# CHANGED RJH 23MAR18
-            raise Exception('Diluent fraction must be in [0,1]')
+            raise Exception('Diluent fraction must be in [0, 1]')
             
     # ================= HERE THE GENERIC PART STARTS =====================
 
@@ -6732,8 +6632,8 @@ def absorptionCoefficient_Generic(Components=None,SourceTables=None,partitionFun
     
         # exclude parameters not involved in calculation
         DATA_DICT = LOCAL_TABLE_CACHE[TableName]['data']
-        parnames_exclude = ['a','global_upper_quanta','global_lower_quanta',
-            'local_upper_quanta','local_lower_quanta','ierr','iref','line_mixing_flag'] 
+        parnames_exclude = ['a', 'global_upper_quanta', 'global_lower_quanta', 
+            'local_upper_quanta', 'local_lower_quanta', 'ierr', 'iref', 'line_mixing_flag'] 
         parnames = set(DATA_DICT)-set(parnames_exclude)
         
         nlines = len(DATA_DICT['nu'])
@@ -6750,12 +6650,12 @@ def absorptionCoefficient_Generic(Components=None,SourceTables=None,partitionFun
             TRANS['Abundances'] = ABUNDANCES
             
             # filter by molecule and isotopologue
-            if (TRANS['molec_id'],TRANS['local_iso_id']) not in ABUNDANCES: continue
+            if (TRANS['molec_id'], TRANS['local_iso_id']) not in ABUNDANCES: continue
                 
             #   FILTER by LineIntensity: compare it with IntencityThreshold
-            TRANS['SigmaT']     = partitionFunction(TRANS['molec_id'],TRANS['local_iso_id'],TRANS['T'])
-            TRANS['SigmaT_ref'] = partitionFunction(TRANS['molec_id'],TRANS['local_iso_id'],TRANS['T_ref'])
-            LineIntensity = calculate_parameter_Sw(None,TRANS)
+            TRANS['SigmaT']     = partitionFunction(TRANS['molec_id'], TRANS['local_iso_id'], TRANS['T'])
+            TRANS['SigmaT_ref'] = partitionFunction(TRANS['molec_id'], TRANS['local_iso_id'], TRANS['T_ref'])
+            LineIntensity = calculate_parameter_Sw(None, TRANS)
             if LineIntensity < IntensityThreshold: continue
 
             # calculate profile parameters 
@@ -6763,9 +6663,9 @@ def absorptionCoefficient_Generic(Components=None,SourceTables=None,partitionFun
                 CALC_INFO = {}
             else:
                 CALC_INFO = None                
-            PARAMETERS = calcpars(TRANS=TRANS,CALC_INFO=CALC_INFO,exclude=exclude)
+            PARAMETERS = calcpars(TRANS=TRANS, CALC_INFO=CALC_INFO, exclude=exclude)
             
-            # get final wing of the line according to max(Gamma0,GammaD), OmegaWingHW and OmegaWing
+            # get final wing of the line according to max(Gamma0, GammaD), OmegaWingHW and OmegaWing
             try:
                 GammaD = PARAMETERS['GammaD']
             except KeyError:
@@ -6774,15 +6674,15 @@ def absorptionCoefficient_Generic(Components=None,SourceTables=None,partitionFun
                 Gamma0 = PARAMETERS['Gamma0']
             except KeyError:
                 Gamma0 = 0
-            GammaMax = max(Gamma0,GammaD)
+            GammaMax = max(Gamma0, GammaD)
             if GammaMax==0 and OmegaWingHW==0:
                 OmegaWing = 10.0 # 10 cm-1 default in case if Gamma0 and GammaD are missing
                 warn('Gamma0 and GammaD are missing; setting OmegaWing to %f cm-1'%OmegaWing)
-            OmegaWingF = max(OmegaWing,OmegaWingHW*GammaMax)
+            OmegaWingF = max(OmegaWing, OmegaWingHW*GammaMax)
             
             # calculate profile on a grid            
-            BoundIndexLower = bisect(Omegas,TRANS['nu']-OmegaWingF)
-            BoundIndexUpper = bisect(Omegas,TRANS['nu']+OmegaWingF)
+            BoundIndexLower = bisect(Omegas, TRANS['nu']-OmegaWingF)
+            BoundIndexUpper = bisect(Omegas, TRANS['nu']+OmegaWingF)
             PARAMETERS['WnGrid'] = Omegas[BoundIndexLower:BoundIndexUpper]
             lineshape_vals = profile(**PARAMETERS)
             Xsect[BoundIndexLower:BoundIndexUpper] += factor * lineshape_vals
@@ -6790,105 +6690,105 @@ def absorptionCoefficient_Generic(Components=None,SourceTables=None,partitionFun
             # append debug information for the abscoef routine                
             if VARIABLES['abscoef_debug']: DEBUG.append(CALC_INFO)
         
-    print('%f seconds elapsed for abscoef; nlines = %d'%(time()-t,nlines))
+    print('%f seconds elapsed for abscoef; nlines = %d'%(time()-t, nlines))
     
-    if File: save_to_file(File,Format,Omegas,Xsect)
-    return Omegas,Xsect    
+    if File: save_to_file(File, Format, Omegas, Xsect)
+    return Omegas, Xsect
 
-def absorptionCoefficient_Priority(*args,**kwargs):
-    return absorptionCoefficient_Generic(*args,**kwargs,
-                                         profile=PROFILE_HT,
+def absorptionCoefficient_Priority(*args, **kwargs):
+    return absorptionCoefficient_Generic(*args, **kwargs, 
+                                         profile=PROFILE_HT, 
                                          calcpars=calculateProfileParametersFullPriority)    
     
-def absorptionCoefficient_HT(*args,**kwargs):
-    return absorptionCoefficient_Generic(*args,**kwargs,
-                                         profile=PROFILE_HT,
+def absorptionCoefficient_HT(*args, **kwargs):
+    return absorptionCoefficient_Generic(*args, **kwargs, 
+                                         profile=PROFILE_HT, 
                                          calcpars=calculateProfileParametersHT)    
                                    
-def absorptionCoefficient_SDVoigt(*args,**kwargs):
-    return absorptionCoefficient_Generic(*args,**kwargs,
-                                          profile=PROFILE_SDVOIGT,
+def absorptionCoefficient_SDVoigt(*args, **kwargs):
+    return absorptionCoefficient_Generic(*args, **kwargs, 
+                                          profile=PROFILE_SDVOIGT, 
                                           calcpars=calculateProfileParametersSDVoigt)
         
-def absorptionCoefficient_Voigt(*args,**kwargs):
-    return absorptionCoefficient_Generic(*args,**kwargs,
-                                          profile=PROFILE_VOIGT,
+def absorptionCoefficient_Voigt(*args, **kwargs):
+    return absorptionCoefficient_Generic(*args, **kwargs, 
+                                          profile=PROFILE_VOIGT, 
                                           calcpars=calculateProfileParametersVoigt)
 
-def absorptionCoefficient_Lorentz(*args,**kwargs):
-    return absorptionCoefficient_Generic(*args,**kwargs,
-                                         profile=PROFILE_LORENTZ,
+def absorptionCoefficient_Lorentz(*args, **kwargs):
+    return absorptionCoefficient_Generic(*args, **kwargs, 
+                                         profile=PROFILE_LORENTZ, 
                                          calcpars=calculateProfileParametersLorentz)
      
-def absorptionCoefficient_Doppler(*args,**kwargs):   
-    return absorptionCoefficient_Generic(*args,**kwargs,
-                                         profile=PROFILE_DOPPLER,
+def absorptionCoefficient_Doppler(*args, **kwargs):   
+    return absorptionCoefficient_Generic(*args, **kwargs, 
+                                         profile=PROFILE_DOPPLER, 
                                          calcpars=calculateProfileParametersDoppler)
     
 absorptionCoefficient_Generic.__doc__ = ABSCOEF_DOCSTRING_TEMPLATE.format(
-    profile='Generic',
+    profile='Generic', 
     usage_example="""
-        nu,coef = absorptionCoefficient_Generic(((2,1),),'co2',WavenumberStep=0.01,
-                                              HITRAN_units=False,Diluent={'air':1},
-                                              profile=PROFILE_VOIGT,
-                                              calcpars=calcProfileParametersVoigt,
-                                              DEBUG=None,
+        nu, coef = absorptionCoefficient_Generic(((2, 1), ), 'co2', WavenumberStep=0.01, 
+                                              HITRAN_units=False, Diluent={'air':1}, 
+                                              profile=PROFILE_VOIGT, 
+                                              calcpars=calcProfileParametersVoigt, 
+                                              DEBUG=None, 
                                               )
     """
 )
 
 absorptionCoefficient_Priority.__doc__ = ABSCOEF_DOCSTRING_TEMPLATE.format(
-    profile='Priority',
+    profile='Priority', 
     usage_example="""
-        nu,coef = absorptionCoefficient_Priority(((2,1),),'co2',WavenumberStep=0.01,
-                                              HITRAN_units=False,Diluent={'air':1})
+        nu, coef = absorptionCoefficient_Priority(((2, 1), ), 'co2', WavenumberStep=0.01, 
+                                              HITRAN_units=False, Diluent={'air':1})
     """
 )
                                    
 absorptionCoefficient_HT.__doc__ = ABSCOEF_DOCSTRING_TEMPLATE.format(
-    profile='HT',
+    profile='HT', 
     usage_example="""
-        nu,coef = absorptionCoefficient_HT(((2,1),),'co2',WavenumberStep=0.01,
-                                              HITRAN_units=False,Diluent={'air':1})
+        nu, coef = absorptionCoefficient_HT(((2, 1), ), 'co2', WavenumberStep=0.01, 
+                                              HITRAN_units=False, Diluent={'air':1})
     """
 )
 
 absorptionCoefficient_SDVoigt.__doc__ = ABSCOEF_DOCSTRING_TEMPLATE.format(
-    profile='SDVoigt',
+    profile='SDVoigt', 
     usage_example="""
-        nu,coef = absorptionCoefficient_SDVoigt(((2,1),),'co2',WavenumberStep=0.01,
-                                              HITRAN_units=False,Diluent={'air':1})
+        nu, coef = absorptionCoefficient_SDVoigt(((2, 1), ), 'co2', WavenumberStep=0.01, 
+                                              HITRAN_units=False, Diluent={'air':1})
     """
 )
 
 absorptionCoefficient_Voigt.__doc__ = ABSCOEF_DOCSTRING_TEMPLATE.format(
-    profile='Voigt',
+    profile='Voigt', 
     usage_example="""
-        nu,coef = absorptionCoefficient_Voigt(((2,1),),'co2',WavenumberStep=0.01,
-                                              HITRAN_units=False,Diluent={'air':1})
+        nu, coef = absorptionCoefficient_Voigt(((2, 1), ), 'co2', WavenumberStep=0.01, 
+                                              HITRAN_units=False, Diluent={'air':1})
     """
 )
 
 absorptionCoefficient_Lorentz.__doc__ = ABSCOEF_DOCSTRING_TEMPLATE.format(
-    profile='Lorentz',
+    profile='Lorentz', 
     usage_example="""
-        nu,coef = absorptionCoefficient_Lorentz(((2,1),),'co2',WavenumberStep=0.01,
-                                              HITRAN_units=False,Diluent={'air':1})
+        nu, coef = absorptionCoefficient_Lorentz(((2, 1), ), 'co2', WavenumberStep=0.01, 
+                                              HITRAN_units=False, Diluent={'air':1})
     """
 )
 
 absorptionCoefficient_Doppler.__doc__ = ABSCOEF_DOCSTRING_TEMPLATE.format(
-    profile='Doppler',
+    profile='Doppler', 
     usage_example="""
-        nu,coef = absorptionCoefficient_Doppler(((2,1),),'co2',WavenumberStep=0.01,
-                                              HITRAN_units=False,Diluent={'air':1})
+        nu, coef = absorptionCoefficient_Doppler(((2, 1), ), 'co2', WavenumberStep=0.01, 
+                                              HITRAN_units=False, Diluent={'air':1})
     """
 )    
     
 # save numpy arrays to file
 # arrays must have same dimensions
-def save_to_file(fname,fformat,*arg):
-    f = open(fname,'w')
+def save_to_file(fname, fformat, *arg):
+    f = open(fname, 'w')
     for i in range(len(arg[0])):
         argline = []
         for j in range(len(arg)):
@@ -6902,26 +6802,26 @@ def save_to_file(fname,fformat,*arg):
 
 absorptionCoefficient_Gauss = absorptionCoefficient_Doppler
 
-def abscoef_HT(table=None,step=None,grid=None,env={'T':296.,'p':1.},file=None):
-    return absorptionCoefficient_HT(SourceTables=table,OmegaStep=step,OmegaGrid=grid,Environment=env,File=file)
+def abscoef_HT(table=None, step=None, grid=None, env={'T':296., 'p':1.}, file=None):
+    return absorptionCoefficient_HT(SourceTables=table, OmegaStep=step, OmegaGrid=grid, Environment=env, File=file)
 
-def abscoef_Voigt(table=None,step=None,grid=None,env={'T':296.,'p':1.},file=None):
-    return absorptionCoefficient_Voigt(SourceTables=table,OmegaStep=step,OmegaGrid=grid,Environment=env,File=file)
+def abscoef_Voigt(table=None, step=None, grid=None, env={'T':296., 'p':1.}, file=None):
+    return absorptionCoefficient_Voigt(SourceTables=table, OmegaStep=step, OmegaGrid=grid, Environment=env, File=file)
     
-def abscoef_Lorentz(table=None,step=None,grid=None,env={'T':296.,'p':1.},file=None):
-    return absorptionCoefficient_Lorentz(SourceTables=table,OmegaStep=step,OmegaGrid=grid,Environment=env,File=file)
+def abscoef_Lorentz(table=None, step=None, grid=None, env={'T':296., 'p':1.}, file=None):
+    return absorptionCoefficient_Lorentz(SourceTables=table, OmegaStep=step, OmegaGrid=grid, Environment=env, File=file)
 
-def abscoef_Doppler(table=None,step=None,grid=None,env={'T':296.,'p':1.},file=None):
-    return absorptionCoefficient_Doppler(SourceTables=table,OmegaStep=step,OmegaGrid=grid,Environment=env,File=file)
+def abscoef_Doppler(table=None, step=None, grid=None, env={'T':296., 'p':1.}, file=None):
+    return absorptionCoefficient_Doppler(SourceTables=table, OmegaStep=step, OmegaGrid=grid, Environment=env, File=file)
 
 abscoef_Gauss = abscoef_Doppler
     
-def abscoef(table=None,step=None,grid=None,env={'T':296.,'p':1.},file=None): # default
-    return absorptionCoefficient_Lorentz(SourceTables=table,OmegaStep=step,OmegaGrid=grid,Environment=env,File=file)
+def abscoef(table=None, step=None, grid=None, env={'T':296., 'p':1.}, file=None): # default
+    return absorptionCoefficient_Lorentz(SourceTables=table, OmegaStep=step, OmegaGrid=grid, Environment=env, File=file)
     
 # ---------------------------------------------------------------------------
     
-def transmittanceSpectrum(Omegas,AbsorptionCoefficient,Environment={'l':100.},
+def transmittanceSpectrum(Omegas, AbsorptionCoefficient, Environment={'l':100.}, 
                           File=None, Format='%e %e', Wavenumber=None):
     """
     INPUT PARAMETERS: 
@@ -6942,18 +6842,18 @@ def transmittanceSpectrum(Omegas,AbsorptionCoefficient,Environment={'l':100.},
         optical path length 'l' (1 m by default)
     ---
     EXAMPLE OF USAGE:
-        nu,trans = transmittanceSpectrum(nu,coef)
+        nu, trans = transmittanceSpectrum(nu, coef)
     ---
     """
     # compatibility with older versions
     if Wavenumber: Omegas=Wavenumber
     l = Environment['l']
     Xsect = exp(-AbsorptionCoefficient*l)
-    if File: save_to_file(File,Format,Omegas,Xsect)
-    return Omegas,Xsect
+    if File: save_to_file(File, Format, Omegas, Xsect)
+    return Omegas, Xsect
 
-def absorptionSpectrum(Omegas,AbsorptionCoefficient,Environment={'l':100.},
-                       File=None, Format='%e %e',Wavenumber=None):
+def absorptionSpectrum(Omegas, AbsorptionCoefficient, Environment={'l':100.}, 
+                       File=None, Format='%e %e', Wavenumber=None):
     """
     INPUT PARAMETERS: 
         Wavenumber/Omegas:   wavenumber grid                    (required)
@@ -6973,17 +6873,17 @@ def absorptionSpectrum(Omegas,AbsorptionCoefficient,Environment={'l':100.},
         optical path length 'l' (1 m by default)
     ---
     EXAMPLE OF USAGE:
-        nu,absorp = absorptionSpectrum(nu,coef)
+        nu, absorp = absorptionSpectrum(nu, coef)
     ---
     """
     # compatibility with older versions
     if Wavenumber: Omegas=Wavenumber
     l = Environment['l']
     Xsect = 1-exp(-AbsorptionCoefficient*l)
-    if File: save_to_file(File,Format,Omegas,Xsect)
-    return Omegas,Xsect
+    if File: save_to_file(File, Format, Omegas, Xsect)
+    return Omegas, Xsect
 
-def radianceSpectrum(Omegas,AbsorptionCoefficient,Environment={'l':100.,'T':296.},
+def radianceSpectrum(Omegas, AbsorptionCoefficient, Environment={'l':100., 'T':296.}, 
                      File=None, Format='%e %e', Wavenumber=None):
     """
     INPUT PARAMETERS: 
@@ -6991,7 +6891,7 @@ def radianceSpectrum(Omegas,AbsorptionCoefficient,Environment={'l':100.,'T':296.
         AbsorptionCoefficient:  absorption coefficient on grid (required)
         Environment:  dictionary containing path length in cm.
                       and temperature in Kelvin.
-                      Default={'l':100.,'T':296.}
+                      Default={'l':100., 'T':296.}
         File:         name of the output file                 (optional) 
         Format: c format used in file output, default '%e %e' (optional)
     OUTPUT PARAMETERS: 
@@ -7008,7 +6908,7 @@ def radianceSpectrum(Omegas,AbsorptionCoefficient,Environment={'l':100.,'T':296.
         as a temperature which was used in absorption coefficient.
     ---
     EXAMPLE OF USAGE:
-        nu,radi = radianceSpectrum(nu,coef)
+        nu, radi = radianceSpectrum(nu, coef)
     ---
     """
     # compatibility with older versions
@@ -7018,17 +6918,17 @@ def radianceSpectrum(Omegas,AbsorptionCoefficient,Environment={'l':100.,'T':296.
     Alw = 1-exp(-AbsorptionCoefficient*l)
     LBBTw = 2*hh*cc**2*Omegas**3 / (exp(hh*cc*Omegas/(cBolts*T)) - 1) * 1.0E-7
     Xsect = Alw*LBBTw # W/sr/cm**2/cm**-1
-    if File: save_to_file(File,Format,Omegas,Xsect)
-    return Omegas,Xsect
+    if File: save_to_file(File, Format, Omegas, Xsect)
+    return Omegas, Xsect
 
 
-# GET X,Y FOR FINE PLOTTING OF A STICK SPECTRUM
+# GET X, Y FOR FINE PLOTTING OF A STICK SPECTRUM
 def getStickXY(TableName):
     """
     Get X and Y for fine plotting of a stick spectrum.
-    Usage: X,Y = getStickXY(TableName).
+    Usage: X, Y = getStickXY(TableName).
     """
-    cent,intens = getColumns(TableName,('nu','sw'))
+    cent, intens = getColumns(TableName, ('nu', 'sw'))
     n = len(cent)
     cent_ = zeros(n*3)
     intens_ = zeros(n*3)
@@ -7037,8 +6937,8 @@ def getStickXY(TableName):
         intens_[3*i+1] = intens[i]
         intens_[3*i+2] = 0
         cent_[(3*i):(3*i+3)] = cent[i]
-    return cent_,intens_
-# /GET X,Y FOR FINE PLOTTING OF A STICK SPECTRUM
+    return cent_, intens_
+# /GET X, Y FOR FINE PLOTTING OF A STICK SPECTRUM
 
 
 # LOW-RES SPECTRA (CONVOLUTION WITH APPARATUS FUNCTION)
@@ -7058,7 +6958,7 @@ def read_hotw(filename):
     Other lines are omitted.
     """
     import sys
-    f = open(filename,'r')
+    f = open(filename, 'r')
     nu = []
     coef = []
     for line in f:
@@ -7071,7 +6971,7 @@ def read_hotw(filename):
                 print(sys.exc_info())
             else:
                 pass    
-    return array(nu),array(coef)
+    return array(nu), array(coef)
 
 # alias for read_hotw for backwards compatibility
 read_xsect = read_hotw
@@ -7081,10 +6981,10 @@ read_xsect = read_hotw
 # ------------------  SPECTRAL CONVOLUTION -------------------------
 
 # rectangular slit function
-def SLIT_RECTANGULAR(x,g):
+def SLIT_RECTANGULAR(x, g):
     """
     Instrumental (slit) function.
-    B(x) = 1/γ , if |x| ≤ γ/2 & B(x) = 0, if |x| > γ/2,
+    B(x) = 1/γ , if |x| ≤ γ/2 & B(x) = 0, if |x| > γ/2, 
     where γ is a slit width or the instrumental resolution.
     """
     index_inner = abs(x) <= g/2
@@ -7095,10 +6995,10 @@ def SLIT_RECTANGULAR(x,g):
     return y
 
 # triangular slit function
-def SLIT_TRIANGULAR(x,g):
+def SLIT_TRIANGULAR(x, g):
     """
     Instrumental (slit) function.
-    B(x) = 1/γ*(1-|x|/γ), if |x| ≤ γ & B(x) = 0, if |x| > γ,
+    B(x) = 1/γ*(1-|x|/γ), if |x| ≤ γ & B(x) = 0, if |x| > γ, 
     where γ is the line width equal to the half base of the triangle.
     """
     index_inner = abs(x) <= g
@@ -7109,31 +7009,31 @@ def SLIT_TRIANGULAR(x,g):
     return y
 
 # gaussian slit function
-def SLIT_GAUSSIAN(x,g):
+def SLIT_GAUSSIAN(x, g):
     """
     Instrumental (slit) function.
-    B(x) = sqrt(ln(2)/pi)/γ*exp(-ln(2)*(x/γ)**2),
+    B(x) = sqrt(ln(2)/pi)/γ*exp(-ln(2)*(x/γ)**2), 
     where γ/2 is a gaussian half-width at half-maximum.
     """
     g /= 2
     return sqrt(log(2))/(sqrt(pi)*g)*exp(-log(2)*(x/g)**2)
 
 # dispersion slit function
-def SLIT_DISPERSION(x,g):
+def SLIT_DISPERSION(x, g):
     """
     Instrumental (slit) function.
-    B(x) = γ/pi/(x**2+γ**2),
+    B(x) = γ/pi/(x**2+γ**2), 
     where γ/2 is a lorentzian half-width at half-maximum.
     """
     g /= 2
     return g/pi/(x**2+g**2)
 
 # cosinus slit function
-def SLIT_COSINUS(x,g):
+def SLIT_COSINUS(x, g):
     return (cos(pi/g*x)+1)/(2*g)
 
 # diffraction slit function
-def SLIT_DIFFRACTION(x,g):
+def SLIT_DIFFRACTION(x, g):
     """
     Instrumental (slit) function.
     """
@@ -7149,10 +7049,10 @@ def SLIT_DIFFRACTION(x,g):
     return y
 
 # apparatus function of the ideal Michelson interferometer
-def SLIT_MICHELSON(x,g):
+def SLIT_MICHELSON(x, g):
     """
     Instrumental (slit) function.
-    B(x) = 2/γ*sin(2pi*x/γ)/(2pi*x/γ) if x!=0 else 1,
+    B(x) = 2/γ*sin(2pi*x/γ)/(2pi*x/γ) if x!=0 else 1, 
     where 1/γ is the maximum optical path difference.
     """
     y = zeros(len(x))
@@ -7165,8 +7065,8 @@ def SLIT_MICHELSON(x,g):
     return y
 
 # spectral convolution with an apparatus (slit) function
-def convolveSpectrum(Omega,CrossSection,Resolution=0.1,AF_wing=10.,
-                     SlitFunction=SLIT_RECTANGULAR,Wavenumber=None):
+def convolveSpectrum(Omega, CrossSection, Resolution=0.1, AF_wing=10., 
+                     SlitFunction=SLIT_RECTANGULAR, Wavenumber=None):
     """
     INPUT PARAMETERS: 
         Wavenumber/Omega:    wavenumber grid                     (required)
@@ -7189,7 +7089,7 @@ def convolveSpectrum(Omega,CrossSection,Resolution=0.1,AF_wing=10.,
         is calculated in a grid with the width=AF_wing and step=Resolution.
     ---
     EXAMPLE OF USAGE:
-        nu_,radi_,i,j,slit = convolveSpectrum(nu,radi,Resolution=2.0,AF_wing=10.0,
+        nu_, radi_, i, j, slit = convolveSpectrum(nu, radi, Resolution=2.0, AF_wing=10.0, 
                                                 SlitFunction=SLIT_MICHELSON)
     ---
     """    
@@ -7197,18 +7097,18 @@ def convolveSpectrum(Omega,CrossSection,Resolution=0.1,AF_wing=10.,
     if Wavenumber: Omega=Wavenumber
     step = Omega[1]-Omega[0]
     if step>=Resolution: raise Exception('step must be less than resolution')
-    #x = arange(-AF_wing,AF_wing+step,step)
-    x = arange_(-AF_wing,AF_wing+step,step) # fix
-    slit = SlitFunction(x,Resolution)
+    #x = arange(-AF_wing, AF_wing+step, step)
+    x = arange_(-AF_wing, AF_wing+step, step) # fix
+    slit = SlitFunction(x, Resolution)
     slit /= sum(slit)*step # simple normalization
     left_bnd = int(len(slit)/2) # new versions of Numpy don't support float indexing
     right_bnd = len(Omega) - int(len(slit)/2) # new versions of Numpy don't support float indexing
-    CrossSectionLowRes = convolve(CrossSection,slit,mode='same')*step
-    return Omega[left_bnd:right_bnd],CrossSectionLowRes[left_bnd:right_bnd],left_bnd,right_bnd,slit
+    CrossSectionLowRes = convolve(CrossSection, slit, mode='same')*step
+    return Omega[left_bnd:right_bnd], CrossSectionLowRes[left_bnd:right_bnd], left_bnd, right_bnd, slit
 
 # spectral convolution with an apparatus (slit) function
-def convolveSpectrumSame(Omega,CrossSection,Resolution=0.1,AF_wing=10.,
-                         SlitFunction=SLIT_RECTANGULAR,Wavenumber=None):
+def convolveSpectrumSame(Omega, CrossSection, Resolution=0.1, AF_wing=10., 
+                         SlitFunction=SLIT_RECTANGULAR, Wavenumber=None):
     """
     Convolves cross section with a slit function with given parameters.
     """
@@ -7216,36 +7116,36 @@ def convolveSpectrumSame(Omega,CrossSection,Resolution=0.1,AF_wing=10.,
     if Wavenumber: Omega=Wavenumber
     step = Omega[1]-Omega[0]
     if step>=Resolution: raise Exception('step must be less than resolution')
-    #x = arange(-AF_wing,AF_wing+step,step)
-    x = arange_(-AF_wing,AF_wing+step,step) # fix
-    slit = SlitFunction(x,Resolution)
+    #x = arange(-AF_wing, AF_wing+step, step)
+    x = arange_(-AF_wing, AF_wing+step, step) # fix
+    slit = SlitFunction(x, Resolution)
     slit /= sum(slit)*step # simple normalization
     left_bnd = 0
     right_bnd = len(Omega)
-    CrossSectionLowRes = convolve(CrossSection,slit,mode='same')*step
-    return Omega[left_bnd:right_bnd],CrossSectionLowRes[left_bnd:right_bnd],left_bnd,right_bnd,slit
+    CrossSectionLowRes = convolve(CrossSection, slit, mode='same')*step
+    return Omega[left_bnd:right_bnd], CrossSectionLowRes[left_bnd:right_bnd], left_bnd, right_bnd, slit
 
-def convolveSpectrumFull(Omega,CrossSection,Resolution=0.1,AF_wing=10.,SlitFunction=SLIT_RECTANGULAR):
+def convolveSpectrumFull(Omega, CrossSection, Resolution=0.1, AF_wing=10., SlitFunction=SLIT_RECTANGULAR):
     """
     Convolves cross section with a slit function with given parameters.
     """
     step = Omega[1]-Omega[0]
-    x = arange(-AF_wing,AF_wing+step,step)
-    slit = SlitFunction(x,Resolution)
+    x = arange(-AF_wing, AF_wing+step, step)
+    slit = SlitFunction(x, Resolution)
     print('step=')
     print(step)
     print('x=')
     print(x)
     print('slitfunc=')
     print(SlitFunction)
-    CrossSectionLowRes = convolve(CrossSection,slit,mode='full')*step
-    return Omega,CrossSectionLowRes,None,None
+    CrossSectionLowRes = convolve(CrossSection, slit, mode='full')*step
+    return Omega, CrossSectionLowRes, None, None
 
 # ------------------------------------------------------------------
 
 # ------------------  SAVE CALC INFO IN CSV FORMAT -------------------------
 
-def save_abscoef_calc_info(filename,parname,CALC_INFO_LIST,delim=';'):
+def save_abscoef_calc_info(filename, parname, CALC_INFO_LIST, delim=';'):
     """
     This is an attempt to save the CALC_INFO from the 
     new versions of the abscoef function.
@@ -7263,8 +7163,8 @@ def save_abscoef_calc_info(filename,parname,CALC_INFO_LIST,delim=';'):
             order.append('val')
         for broadener in INFO['mixture']:
             for argname in INFO['mixture'][broadener]['args']:
-                src_name = '%s_%s_src'%(argname,broadener)
-                val_name = '%s_%s_val'%(argname,broadener)
+                src_name = '%s_%s_src'%(argname, broadener)
+                val_name = '%s_%s_val'%(argname, broadener)
                 item[src_name] = INFO['mixture'][broadener]['args'][argname]['source']
                 item[val_name] = INFO['mixture'][broadener]['args'][argname]['value']
                 if src_name not in order:
@@ -7273,10 +7173,10 @@ def save_abscoef_calc_info(filename,parname,CALC_INFO_LIST,delim=';'):
                     order.append(val_name)
         col.append(item)    
     # Export the result to the CSV file.
-    #col.export_csv('test2.py_%s_%s.csv'%(TABLE_NAMETABLE_NAME,parname),order=order)    
-    with open(filename,'w') as fout:
+    #col.export_csv('test2.py_%s_%s.csv'%(TABLE_NAMETABLE_NAME, parname), order=order)
+    with open(filename, 'w') as fout:
         header = ('%s'%delim).join(order)
         fout.write(header+'\n')
         for CALC_INFO in col:
-            line = ('%s'%delim).join([str(CALC_INFO.get(pname,'')) for pname in order])
+            line = ('%s'%delim).join([str(CALC_INFO.get(pname, '')) for pname in order])
             fout.write(line+'\n')
