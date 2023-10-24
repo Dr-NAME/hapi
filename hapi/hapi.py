@@ -37,7 +37,7 @@ from warnings import warn, simplefilter
 from time import time
 import pydoc
 from .tips import PYTIPS
-from .dtype import ComplexType, IntegerType, FloatType
+from .dtype import ComplexType, IntegerType, FloatType64
 from .constants import cZero, cBolts, cc, hh, cSqrtLn2divSqrtPi, cLn2, cSqrtLn2, cSqrt2Ln2
 
 # Enable warning repetitions
@@ -4720,8 +4720,8 @@ def fetch(TableName, M, I, numin, numax, ParameterGroups=[], Parameters=[]):
 # define static data
 zone = ComplexType(1.0e0 + 0.0e0j)
 zi = ComplexType(0.0e0 + 1.0e0j)
-tt = FloatType([0.5e0, 1.5e0, 2.5e0, 3.5e0, 4.5e0, 5.5e0, 6.5e0, 7.5e0, 8.5e0, 9.5e0, 10.5e0, 11.5e0, 12.5e0, 13.5e0, 14.5e0])
-pipwoeronehalf = FloatType(0.564189583547756e0)
+tt = FloatType64([0.5e0, 1.5e0, 2.5e0, 3.5e0, 4.5e0, 5.5e0, 6.5e0, 7.5e0, 8.5e0, 9.5e0, 10.5e0, 11.5e0, 12.5e0, 13.5e0, 14.5e0])
+pipwoeronehalf = FloatType64(0.564189583547756e0)
 
 # "naive" implementation for benchmarks
 def cpf3(X, Y):
@@ -4751,9 +4751,9 @@ def cpf3(X, Y):
     
     return zsum.real, zsum.imag
 
-T = FloatType([0.314240376e0, 0.947788391e0, 1.59768264e0, 2.27950708e0, 3.02063703e0, 3.8897249e0])
-U = FloatType([1.01172805e0, -0.75197147e0, 1.2557727e-2, 1.00220082e-2, -2.42068135e-4, 5.00848061e-7])
-S = FloatType([1.393237e0, 0.231152406e0, -0.155351466e0, 6.21836624e-3, 9.19082986e-5, -6.27525958e-7])
+T = FloatType64([0.314240376e0, 0.947788391e0, 1.59768264e0, 2.27950708e0, 3.02063703e0, 3.8897249e0])
+U = FloatType64([1.01172805e0, -0.75197147e0, 1.2557727e-2, 1.00220082e-2, -2.42068135e-4, 5.00848061e-7])
+S = FloatType64([1.393237e0, 0.231152406e0, -0.155351466e0, 6.21836624e-3, 9.19082986e-5, -6.27525958e-7])
 
 # Complex probability function implementation (Humlicek)
 def cpf(X, Y):
@@ -4771,7 +4771,7 @@ def cpf(X, Y):
             Y = array(Y)
     
     # REGION3
-    index_REGION3 = where(sqrt(X**2 + Y**2) > FloatType(8.0e0))
+    index_REGION3 = where(sqrt(X**2 + Y**2) > FloatType64(8.0e0))
     X_REGION3 = X[index_REGION3]
     Y_REGION3 = Y[index_REGION3]
     zm1 = zone/ComplexType(X_REGION3 + zi*Y_REGION3)
@@ -4787,11 +4787,11 @@ def cpf(X, Y):
     X_REGION12 = X[index_REGION12]
     Y_REGION12 = Y[index_REGION12]
     
-    WR = FloatType(0.0e0)
-    WI = FloatType(0.0e0)
+    WR = FloatType64(0.0e0)
+    WI = FloatType64(0.0e0)
     
     # REGION12
-    Y1_REGION12 = Y_REGION12 + FloatType(1.5e0)
+    Y1_REGION12 = Y_REGION12 + FloatType64(1.5e0)
     Y2_REGION12 = Y1_REGION12**2
 
     # REGION2    
@@ -4804,27 +4804,27 @@ def cpf(X, Y):
     Y_REGION2 = Y[index_REGION2]
     Y1_REGION2 = Y1_REGION12[subindex_REGION2]
     Y2_REGION2 = Y2_REGION12[subindex_REGION2]
-    Y3_REGION2 = Y_REGION2 + FloatType(3.0e0)
+    Y3_REGION2 = Y_REGION2 + FloatType64(3.0e0)
     
     WR_REGION2 = WR
     WI_REGION2 = WI
 
     WR_REGION2 = zeros(len(X_REGION2))
-    ii = abs(X_REGION2) < FloatType(12.0e0)
+    ii = abs(X_REGION2) < FloatType64(12.0e0)
     WR_REGION2[ii] = exp(-X_REGION2[ii]**2)
     WR_REGION2[~ii] = WR
     
     for I in range(6):
         R_REGION2 = X_REGION2 - T[I]
         R2_REGION2 = R_REGION2**2
-        D_REGION2 = FloatType(1.0e0) / (R2_REGION2 + Y2_REGION2)
+        D_REGION2 = FloatType64(1.0e0) / (R2_REGION2 + Y2_REGION2)
         D1_REGION2 = Y1_REGION2 * D_REGION2
         D2_REGION2 = R_REGION2 * D_REGION2
         WR_REGION2 = WR_REGION2 + Y_REGION2 * (U[I]*(R_REGION2*D2_REGION2 - 1.5e0*D1_REGION2) + 
                                                S[I]*Y3_REGION2*D2_REGION2)/(R2_REGION2 + 2.25e0)
         R_REGION2 = X_REGION2 + T[I]
         R2_REGION2 = R_REGION2**2                
-        D_REGION2 = FloatType(1.0e0) / (R2_REGION2 + Y2_REGION2)
+        D_REGION2 = FloatType64(1.0e0) / (R2_REGION2 + Y2_REGION2)
         D3_REGION2 = Y1_REGION2 * D_REGION2
         D4_REGION2 = R_REGION2 * D_REGION2
         WR_REGION2 = WR_REGION2 + Y_REGION2 * (U[I]*(R_REGION2*D4_REGION2 - 1.5e0*D3_REGION2) - 
@@ -4845,11 +4845,11 @@ def cpf(X, Y):
     
     for I in range(6):
         R_REGION1 = X_REGION1 - T[I]
-        D_REGION1 = FloatType(1.0e0) / (R_REGION1**2 + Y2_REGION1)
+        D_REGION1 = FloatType64(1.0e0) / (R_REGION1**2 + Y2_REGION1)
         D1_REGION1 = Y1_REGION1 * D_REGION1
         D2_REGION1 = R_REGION1 * D_REGION1
         R_REGION1 = X_REGION1 + T[I]
-        D_REGION1 = FloatType(1.0e0) / (R_REGION1**2 + Y2_REGION1)
+        D_REGION1 = FloatType64(1.0e0) / (R_REGION1**2 + Y2_REGION1)
         D3_REGION1 = Y1_REGION1 * D_REGION1
         D4_REGION1 = R_REGION1 * D_REGION1
         
@@ -5018,7 +5018,7 @@ def pcqsdhc(sg0, GamD, Gam0, Gam2, Shift0, Shift2, anuVC, eta, sg, Ylm=0.0):
         if any(index_PART4):
             X_TMP = X[index_PART4]
             Z1 = sqrt(X_TMP + Y) - csqrtY
-            Z2 = Z1 + FloatType(2.0e0) * csqrtY
+            Z2 = Z1 + FloatType64(2.0e0) * csqrtY
             xZ1 = -Z1.imag
             yZ1 =  Z1.real
             xZ2 = -Z2.imag
@@ -6359,7 +6359,7 @@ PRESSURE_INDUCED_ENVDEP = {
 # temperature dependence for intensities (HITRAN)
 def EnvironmentDependency_Intensity(LineIntensityRef, T, Tref, SigmaT, SigmaTref, 
                                     LowerStateEnergy, LineCenter):
-    const = FloatType(1.4388028496642257)
+    const = FloatType64(1.4388028496642257)
     ch = exp(-const*LowerStateEnergy/T)*(1-exp(-const*LineCenter/T))
     zn = exp(-const*LowerStateEnergy/Tref)*(1-exp(-const*LineCenter/Tref))
     LineIntensity = LineIntensityRef*SigmaTref/SigmaT*ch/zn
@@ -6575,8 +6575,8 @@ def absorptionCoefficient_Generic(Components=None, SourceTables=None, partitionF
     Xsect = zeros(number_of_points)
        
     # reference temperature and pressure
-    T_ref_default = FloatType(296.) # K
-    p_ref_default = FloatType(1.) # atm
+    T_ref_default = FloatType64(296.) # K
+    p_ref_default = FloatType64(1.) # atm
     
     # actual temperature and pressure
     T = Environment['T'] # K
@@ -6600,7 +6600,7 @@ def absorptionCoefficient_Generic(Components=None, SourceTables=None, partitionF
         
     # pre-calculation of volume concentration
     if HITRAN_units:
-        factor = FloatType(1.0)
+        factor = FloatType64(1.0)
     else:
         factor = volumeConcentration(p, T)
         
