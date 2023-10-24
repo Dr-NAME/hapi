@@ -91,9 +91,9 @@ VARIABLES['DISPLAY_FETCH_URL'] = False
 # from the shift of the nodes due to error accumulation.
 # This effect is pronounced only if the step is sufficiently small.
 def arange_(lower, upper, step):
-    npnt = floor((upper-lower)/step)+1
+    npnt = floor((upper - lower)/step) + 1
     npnt = int(npnt) # cast to integer to avoid type errors
-    upper_new = lower + step*(npnt-1)
+    upper_new = lower + step*(npnt - 1)
     if abs((upper-upper_new)-step) < 1e-10:
         upper_new += step
         npnt += 1    
@@ -860,11 +860,11 @@ def getRowObjectFromString(input_string, TableName):
         (lng, trail, lngpnt, ty) = re.search(regex, par_format).groups()
         lng = int(lng)
         par_value = input_string[pos:(pos+lng)]
-        if ty=='d': # integer value
+        if ty == 'd': # integer value
            par_value = int(par_value)
         elif ty.lower() in set(['e', 'f']): # float value
            par_value = float(par_value)
-        elif ty=='s': # string value
+        elif ty == 's': # string value
            pass # don't strip string value
         else:
            print('err1')
@@ -1017,7 +1017,7 @@ def storage2cache(TableName, cast=True, ext=None, nlines=None, pos=None):
             size = int(aux)
             end = start + size
             def cfunc(line, dtype=dtype, start=start, end=end, qnt=qnt):
-                if dtype==float:
+                if dtype == float:
                     try:
                         return dtype(line[start:end])
                     except ValueError: # possible D exponent instead of E 
@@ -1202,7 +1202,7 @@ SAMPLE_CONDITIONS = ('AND', ('SET', 'internal_iso_id', [1, 2, 3, 4, 5, 6]), ('>=
 # sample hitranonline protocol
 # http://hitran.cloudapp.net/lbl/5?output_format_id=1&iso_ids_list=5&numin=0&numax=100&access=api&key=e20e4bd3-e12c-4931-99e0-4c06e88536bd
 
-CONDITION_OPERATIONS = set(['AND', 'OR', 'NOT', 'RANGE', 'IN', '<', '>', '<=', '>=', '==', '!=', 'LIKE', 'STR', '+', '-', '*', '/', 'MATCH', 'SEARCH', 'FINDALL'])
+CONDITION_OPERATIONS = set(['AND', 'OR', 'NOT', 'RANGE', 'IN', '<', '>', '<=', '>=', ' == ', '!=', 'LIKE', 'STR', '+', '-', '*', '/', 'MATCH', 'SEARCH', 'FINDALL'])
 
 # Operations used in Condition verification
 # Basic scheme: operationXXX(args),
@@ -1565,7 +1565,7 @@ def evaluateExpression(root, VarDictionary, GroupIndexKey=None):
           return groupCOUNT(GroupIndexKey)
        else:
           raise Exception('Unknown operator: %s' % root[0])
-    elif type(root)==str:
+    elif type(root) == str:
        # root is a par_name
        return VarDictionary[root]
     else: 
@@ -1598,7 +1598,7 @@ def evaluateExpression(root, VarDictionary, GroupIndexKey=None):
             return OPERATORS[head](args)
         except KeyError:
             raise Exception('Unknown operator: %s' % head)
-    elif type(root)==str:
+    elif type(root) == str:
        # root is a par_name
        return VarDictionary[root]
     else: 
@@ -1963,7 +1963,7 @@ def selectInto(DestinationTableName, TableName, ParameterNames, Conditions):
     # if ParameterNames is '*' then all parameters are used
     #table_columns = LOCAL_TABLE_CACHE[TableName]['data'].keys()
     #table_length = len(TableObject['header']['number_of_rows'])
-    #if ParameterNames=='*':
+    #if ParameterNames == '*':
     #   ParameterNames = table_columns
     # check if Conditions contain elements which are not in the TableObject
     #condition_variables = getConditionVariables(Conditions)
@@ -2156,7 +2156,7 @@ def sort(TableName, DestinationTableName=None, ParameterNames=None, Accending=Tr
 #          corresponding to this key
 #   STREAM_UPDATE_FLAG = TRUE if value in GROUP_INDEX needs updating
 #                      = FALSE otherwise
-#   If no grouping variables are specified (GroupParameterNames==None)
+#   If no grouping variables are specified (GroupParameterNames == None)
 #    than the following key is used: "__GLOBAL__"
 
 
@@ -2226,7 +2226,7 @@ def group(TableName, DestinationTableName=QUERY_BUFFER, ParameterNames=None, Gro
         RowIDGroup = GROUP_INDEX[GroupIndexKey]['ROWID']
         setRowObject(RowIDGroup, RowObjectNew, DestinationTableName)
     # Output result if required
-    if Output and DestinationTableName==QUERY_BUFFER:
+    if Output and DestinationTableName == QUERY_BUFFER:
        outputTable(DestinationTableName, File=File)
 
 # /GROUPING =========================================================
@@ -4397,7 +4397,7 @@ def getHelp(arg=None):
     """
     This function provides interactive manuals and tutorials.
     """
-    if arg==None:
+    if arg == None:
         print('--------------------------------------------------------------')
         print('Hello, this is an interactive help system of HITRANonline API.')
         print('--------------------------------------------------------------')
@@ -4405,7 +4405,7 @@ def getHelp(arg=None):
         print('    tutorial  -  interactive tutorials on HAPI')
         print('    units     -  units used in calculations')
         print('    index     -  index of available HAPI functions')
-    elif arg=='tutorial':
+    elif arg == 'tutorial':
         print('-----------------------------------')
         print('This is a tutorial section of help.')
         print('-----------------------------------')
@@ -4414,15 +4414,15 @@ def getHelp(arg=None):
         print('    spectra   -  calculating spectral functions')
         print('    plotting  -  visualizing data with matplotlib')
         print('    python    -  Python quick start guide')
-    elif arg=='python':
+    elif arg == 'python':
         print_python_tutorial()
-    elif arg=='data':
+    elif arg == 'data':
         print_data_tutorial()
-    elif arg=='spectra':
+    elif arg == 'spectra':
         print_spectra_tutorial()
-    elif arg=='plotting':
+    elif arg == 'plotting':
         print_plotting_tutorial()
-    elif arg=='index':
+    elif arg == 'index':
         print('------------------------------')
         print('FETCHING DATA:')
         print('------------------------------')
@@ -5240,7 +5240,7 @@ def PROFILE_LORENTZ(Nu, Gamma0, Delta0, WnGrid, YRosen=0.0, Sw=1.0):
     #      YRosen    : 1st order (Rosenkranz) line mixing coefficients in cm-1 (Input)
     """
     # reduce the extra calculations in the case if YRosen is zero:
-    if YRosen==0.0:
+    if YRosen == 0.0:
         return Sw*Gamma0/(pi*(Gamma0**2+(WnGrid+Delta0-Nu)**2))
     else:
         return Sw*(Gamma0+YRosen*(WnGrid+Delta0-Nu))/(pi*(Gamma0**2+(WnGrid+Delta0-Nu)**2))
@@ -6675,7 +6675,7 @@ def absorptionCoefficient_Generic(Components=None, SourceTables=None, partitionF
             except KeyError:
                 Gamma0 = 0
             GammaMax = max(Gamma0, GammaD)
-            if GammaMax==0 and OmegaWingHW==0:
+            if GammaMax == 0 and OmegaWingHW == 0:
                 OmegaWing = 10.0 # 10 cm-1 default in case if Gamma0 and GammaD are missing
                 warn('Gamma0 and GammaD are missing; setting OmegaWing to %f cm-1'%OmegaWing)
             OmegaWingF = max(OmegaWing, OmegaWingHW*GammaMax)
@@ -7038,7 +7038,7 @@ def SLIT_DIFFRACTION(x, g):
     Instrumental (slit) function.
     """
     y = zeros(len(x))
-    index_zero = x==0
+    index_zero = x == 0
     index_nonzero = ~index_zero
     dk_ = pi/g
     x_ = dk_*x[index_nonzero]
@@ -7056,7 +7056,7 @@ def SLIT_MICHELSON(x, g):
     where 1/γ is the maximum optical path difference.
     """
     y = zeros(len(x))
-    index_zero = x==0
+    index_zero = x == 0
     index_nonzero = ~index_zero
     dk_ = 2*pi/g
     x_ = dk_*x[index_nonzero]

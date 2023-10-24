@@ -28649,11 +28649,11 @@ def partitionSum(M, I, T, step=None, version=2021):
     ---
     """
     # version selector
-    if version==2011:
+    if version == 2011:
         BD_TIPS = BD_TIPS_2011_PYTHON
-    elif version==2017:
+    elif version == 2017:
         BD_TIPS = BD_TIPS_2017_PYTHON
-    elif version==2021:
+    elif version == 2021:
         BD_TIPS = BD_TIPS_2021_PYTHON
     else:
         raise Exception('Unknown version of TIPS: %s'%str(version))
