@@ -791,11 +791,11 @@ def formatString(par_format, par_value, lang='FORTRAN'):
        result = par_format % par_value
        res = result.strip()
        if lng == lngpnt + 1:
-          if res[0:1] == '0':
+          if res[0] == '0':
              result = '%%%ds' % lng % res[1:]
        if par_value < 0:
-          if res[1:2] == '0':
-             result = '%%%ds' % lng % (res[0:1]+res[2:])
+          if res[1] == '0':
+             result = '%%%ds' % lng % (res[0]+res[2:])
     return result
 
 def putRowObjectToString(RowObject):
