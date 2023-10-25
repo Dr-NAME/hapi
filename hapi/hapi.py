@@ -2955,7 +2955,7 @@ def fetch(TableName, M, I, numin, numax, ParameterGroups=[], Parameters=[]):
 zone = ComplexType(1.0e0 + 0.0e0j)
 zi = ComplexType(0.0e0 + 1.0e0j)
 tt = FloatType64([0.5e0, 1.5e0, 2.5e0, 3.5e0, 4.5e0, 5.5e0, 6.5e0, 7.5e0, 8.5e0, 9.5e0, 10.5e0, 11.5e0, 12.5e0, 13.5e0, 14.5e0])
-pipwoeronehalf = FloatType64(0.564189583547756e0)
+pipoweronehalf = FloatType64(0.564189583547756e0)
 
 # "naive" implementation for benchmarks
 def cpf3(X, Y):
@@ -2981,7 +2981,7 @@ def cpf3(X, Y):
         zterm *= zm2*tt_i
         zsum += zterm
     
-    zsum *= zi*zm1*pipwoeronehalf
+    zsum *= zi*zm1*pipoweronehalf
     
     return zsum.real, zsum.imag
 
@@ -3015,7 +3015,7 @@ def cpf(X, Y):
     for tt_i in tt:
         zterm *= zm2*tt_i
         zsum_REGION3 += zterm
-    zsum_REGION3 *= zi*zm1*pipwoeronehalf
+    zsum_REGION3 *= zi*zm1*pipoweronehalf
     
     index_REGION12 = setdiff1d(array(arange(len(X))), array(index_REGION3))
     X_REGION12 = X[index_REGION12]
