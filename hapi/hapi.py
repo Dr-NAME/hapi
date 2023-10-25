@@ -38,7 +38,7 @@ from time import time
 from .tips import PYTIPS
 from .dtype import ComplexType, IntegerType, FloatType64
 from .constants import cZero, cBolts, cc, hh, cSqrtLn2divSqrtPi, cLn2, cSqrtLn2, cSqrt2Ln2
-from .iso import ISO, ISO_ID
+from .iso import ISO, ISO_ID, ISO_INDEX, ISO_ID_INDEX
 # Enable warning repetitions
 simplefilter('always', UserWarning)
 
