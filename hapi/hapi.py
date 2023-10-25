@@ -711,7 +711,7 @@ def getFullTableAndHeaderName(TableName, ext='data'):
     return fullpath_data, fullpath_header
 
 def getParameterFormat(ParameterName, TableName):
-    return LOCAL_TABLE_CACHE[TableName]['header']['format']
+    return LOCAL_TABLE_CACHE[TableName]['header']['format'][ParameterName]
 
 def getTableHeader(TableName):
     return LOCAL_TABLE_CACHE[TableName]['header']
