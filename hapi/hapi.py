@@ -729,6 +729,7 @@ def getRowObject(RowID, TableName):
 def addRowObject(RowObject, TableName):
     for par_name, par_value, par_format in RowObject:
         LOCAL_TABLE_CACHE[TableName]['data'][par_name].append(par_value)
+    LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows'] += 1
 
 def setRowObject(RowID, RowObject, TableName):
     number_of_rows = LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows']
@@ -737,7 +738,6 @@ def setRowObject(RowID, RowObject, TableName):
            LOCAL_TABLE_CACHE[TableName]['data'][par_name][RowID] = par_value
     else:
        # !!! XXX ATTENTION: THIS IS A TEMPORARY INSERTION XXX !!!
-       LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows'] += 1
        addRowObject(RowObject, TableName)
 
 def getDefaultRowObject(TableName):
@@ -1973,7 +1973,6 @@ def selectInto(DestinationTableName, TableName, ParameterNames, Conditions):
     if DestinationTableName == TableName:
        raise Exception('Selecting into source table is forbidden')
     table_length = LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows']
-    row_count = 0
     for RowID in range(0, table_length):
         RowObject = getRowObject(RowID, TableName)
         VarDictionary = getVarDictionary(RowObject)
@@ -1982,8 +1981,6 @@ def selectInto(DestinationTableName, TableName, ParameterNames, Conditions):
         RowObjectNew = newRowObject(ParameterNames, RowObject, VarDictionary, ContextFormat)
         if checkRowObject(RowObject, Conditions, VarDictionary):
            addRowObject(RowObjectNew, DestinationTableName)
-           row_count += 1
-    LOCAL_TABLE_CACHE[DestinationTableName]['header']['number_of_rows'] += row_count
 
 def length(TableName):
     tab_len = LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows']
