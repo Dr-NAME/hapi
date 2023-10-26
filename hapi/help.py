@@ -931,7 +931,7 @@ Several lineshape (line profile) families are currently available:
 6) Speed-dependent Rautian profile
 7) HT profile (Hartmann-Tran)
 
-Each profile has it's own uniwue set of parameters. Normally one should
+Each profile has it's own unique set of parameters. Normally one should
 use profile parameters only in conjunction with their "native" profiles.
 
 So, let's start exploring the available profiles using getHelp:
@@ -1015,11 +1015,11 @@ The syntax is as follows: partitionSum(M, I, T), where M, I - standard
 HITRAN molecule-isotopologue notation, T - definition of temperature
 range.
 
-Usecase 1: temperatuer is defined by a list:
+Usecase 1: temperature is defined by a list:
 >>> Q = partitionSum(1, 1, [70, 80, 90])
 
 Usecase 2: temperature is defined by bounds and the step:
->>> T, Q = partiionSum(1, 1, [70, 3000], step=1.0)
+>>> T, Q = partitionSum(1, 1, [70, 3000], step=1.0)
 
 In the latter example we calculate a partition sum on a range of
 temperatures from 70K to 3000K using a step 1.0 K, and having arrays
