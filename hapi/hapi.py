@@ -915,21 +915,18 @@ def cache2storage(TableName):
 
     fullpath_data = VARIABLES['BACKEND_DATABASE_NAME'] + '/' + TableName + '.data' # bugfix
     fullpath_header = VARIABLES['BACKEND_DATABASE_NAME'] + '/' + TableName + '.header' # bugfix
-    OutfileData = open(fullpath_data, 'w')
-    OutfileHeader = open(fullpath_header, 'w')
-    # write table data
-    line_count = 1
-    line_number = LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows']
-    for RowID in range(0, line_number):
-        line_count += 1
-        RowObject = getRowObject(RowID, TableName)
-        raw_string = putRowObjectToString(RowObject)
-        OutfileData.write(raw_string+'\n')
-    # write table header
-    TableHeader = getTableHeader(TableName)
-    OutfileHeader.write(json.dumps(TableHeader, indent=2))
+    with open(fullpath_data, 'w') as OutfileData, open(fullpath_header, 'w') as OutfileHeader:
+        # write table data
+        line_number = LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows']
+        for RowID in range(0, line_number):
+            RowObject = getRowObject(RowID, TableName)
+            raw_string = putRowObjectToString(RowObject)
+            OutfileData.write(raw_string+'\n')
+        # write table header
+        TableHeader = getTableHeader(TableName)
+        OutfileHeader.write(json.dumps(TableHeader, indent=2))
     
-def storage2cache(TableName, cast=True, ext=None, nlines=None, pos=None):
+def storage2cache(TableName, cast=True, ext='data', nlines=None, pos=None):
     """ edited by NHL
     TableName: name of the HAPI table to read in
     ext: file extension
@@ -939,25 +936,16 @@ def storage2cache(TableName, cast=True, ext=None, nlines=None, pos=None):
     if nlines is not None:
         print('WARNING: storage2cache is reading the block of maximum %d lines'%nlines)
     fullpath_data, fullpath_header = getFullTableAndHeaderName(TableName, ext)
-    if TableName in LOCAL_TABLE_CACHE and \
-       'filehandler' in LOCAL_TABLE_CACHE[TableName] and \
-       LOCAL_TABLE_CACHE[TableName]['filehandler'] is not None:
-        InfileData = LOCAL_TABLE_CACHE[TableName]['filehandler']
-    else:
-        InfileData = open_(fullpath_data, 'r')
-    InfileHeader = open(fullpath_header, 'r')
-    #try:
-    header_text = InfileHeader.read()
-    try:
-        Header = json.loads(header_text)
-    except:
-        print('HEADER:')
-        print(header_text)
-        raise Exception('Invalid header')
+    with open(fullpath_header, 'r') as InfileHeader:
+        try:
+            Header = json.load(InfileHeader)
+        except:
+            print('HEADER:')
+            print(header_text)
+            raise Exception('Invalid header')
     LOCAL_TABLE_CACHE[TableName] = {}
     LOCAL_TABLE_CACHE[TableName]['header'] = Header
     LOCAL_TABLE_CACHE[TableName]['data'] = CaselessDict()
-    LOCAL_TABLE_CACHE[TableName]['filehandler'] = InfileData
     # Check if Header['order'] and Header['extra'] contain
     #  parameters with same names, raise exception if true.
     #intersct = set(Header['order']).intersection(set(Header.get('extra', [])))
@@ -983,18 +971,20 @@ def storage2cache(TableName, cast=True, ext=None, nlines=None, pos=None):
     if 'extra' in header and header['extra']:
         line_count = 0
         flag_EOF = False
-        while True:
-            if nlines is not None and line_count >= nlines: break
-            line = InfileData.readline()
-            if line == '': # end of file is represented by an empty string
-                flag_EOF = True
-                break 
-            try:
-                RowObject = getRowObjectFromString(line, TableName)
-                line_count += 1
-            except:
-                continue
-            addRowObject(RowObject, TableName)
+        with open(fullpath_data, 'r') as InfileData:
+            while True:
+                if nlines is not None and line_count >= nlines:
+                    break
+                line = InfileData.readline()
+                if line == '': # end of file is represented by an empty string
+                    flag_EOF = True
+                    break
+                try:
+                    RowObject = getRowObjectFromString(line, TableName)
+                    line_count += 1
+                except:
+                    continue
+                addRowObject(RowObject, TableName)
 
         LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows'] = line_count
     else:
@@ -1045,14 +1035,15 @@ def storage2cache(TableName, cast=True, ext=None, nlines=None, pos=None):
         flag_EOF = False
         line_count = 0
         data_matrix = []
-        while True:
-            if nlines is not None and line_count >= nlines: break
-            line = InfileData.readline()
-            if line == '': # end of file is represented by an empty string
-                flag_EOF = True
-                break 
-            data_matrix.append([cvt(line) for cvt in converters])
-            line_count += 1
+        with open(fullpath_data, 'r') as InfileData:
+            while True:
+                if nlines is not None and line_count >= nlines: break
+                line = InfileData.readline()
+                if line == '': # end of file is represented by an empty string
+                    flag_EOF = True
+                    break
+                data_matrix.append([cvt(line) for cvt in converters])
+                line_count += 1
         data_columns = zip(*data_matrix)
         for qnt, col in zip(quantities, data_columns):
             if type(col[0]) in {int, float}:
@@ -1093,10 +1084,6 @@ def storage2cache(TableName, cast=True, ext=None, nlines=None, pos=None):
     LOCAL_TABLE_CACHE[TableName]['header']['order'] = glob_order
     LOCAL_TABLE_CACHE[TableName]['header']['format'] = glob_format
     LOCAL_TABLE_CACHE[TableName]['header']['default'] = glob_default
-    if flag_EOF:
-        InfileData.close()
-        LOCAL_TABLE_CACHE[TableName]['filehandler'] = None
-    InfileHeader.close()
     print('                     Lines parsed: %d' % line_count)
     return flag_EOF    
     
@@ -1139,11 +1126,10 @@ def scanForNewParfiles(StorageName):
 
 def createHeader(TableName):
     fname = TableName + '.header'
-    fp = open(VARIABLES['BACKEND_DATABASE_NAME']+'/'+fname, 'w')
-    if os.path.isfile(TableName):
-        raise Exception('File \"%s\" already exists!' % fname)
-    fp.write(json.dumps(HITRAN_DEFAULT_HEADER, indent=2))
-    fp.close()
+    with open(VARIABLES['BACKEND_DATABASE_NAME']+'/'+fname, 'w') as fp:
+        if os.path.isfile(TableName):
+            raise Exception('File \"%s\" already exists!' % fname)
+        fp.write(json.dumps(HITRAN_DEFAULT_HEADER, indent=2))
 
 def loadCache():
     print('Using '+VARIABLES['BACKEND_DATABASE_NAME']+'\n')
@@ -1779,26 +1765,19 @@ def describeTable(TableName):
 # Write a table to File or STDOUT
 def outputTable(TableName, Conditions=None, File=None, Header=True):
     # Display or record table with condition checking
-    if File:
-       Header = False
-       OutputFile = open(File, 'w')
-    if Header:
-       headstr = putTableHeaderToString(TableName)
-       if File:
-          OutputFile.write(headstr)
-       else:
-          print(headstr)
-    for RowID in range(0, LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows']):
-        RowObject = getRowObject(RowID, TableName)
-        VarDictionary = getVarDictionary(RowObject)
-        VarDictionary['LineNumber'] = RowID
-        if not checkRowObject(RowObject, Conditions, VarDictionary):
-           continue
-        raw_string = putRowObjectToString(RowObject)
-        if File:
-           OutputFile.write(raw_string+'\n')
-        else:
-           print(raw_string)
+    with open(File, 'w', newline="") if File else sys.stdout as OutputFile:
+        if Header and not File:
+            headstr = putTableHeaderToString(TableName)
+            OutputFile.write(headstr + "\n")
+
+        for RowID in range(0, LOCAL_TABLE_CACHE[TableName]['header']['number_of_rows']):
+            RowObject = getRowObject(RowID, TableName)
+            VarDictionary = getVarDictionary(RowObject)
+            VarDictionary['LineNumber'] = RowID
+            if not checkRowObject(RowObject, Conditions, VarDictionary):
+                continue
+            raw_string = putRowObjectToString(RowObject)
+            OutputFile.write(raw_string + '\n')
 
 # Create table "prototype-based" way
 def createTable(TableName, RowObjectDefault):
@@ -3116,7 +3095,7 @@ def polyval(p, x):
         y *= x
         y += v
     return y
-""";
+"""
     
 def cef(x, y, N):
     # Computes the function w(z) = exp(-zA2) erfc(-iz) using a rational
@@ -5015,14 +4994,13 @@ absorptionCoefficient_Doppler.__doc__ = ABSCOEF_DOCSTRING_TEMPLATE.format(
 # save numpy arrays to file
 # arrays must have same dimensions
 def save_to_file(fname, fformat, *arg):
-    f = open(fname, 'w')
-    for i in range(len(arg[0])):
-        argline = []
-        for j in range(len(arg)):
-            argline.append(arg[j][i])
-        f.write((fformat+'\n') % tuple(argline))
-    f.close()
-    
+    with open(fname, 'w') as f:
+        for i in range(len(arg[0])):
+            argline = []
+            for j in range(len(arg)):
+                argline.append(arg[j][i])
+            f.write((fformat+'\n') % tuple(argline))
+
 # ---------------------------------------------------------------------------
 # SHORTCUTS AND ALIASES FOR ABSORPTION COEFFICIENTS
 # ---------------------------------------------------------------------------
@@ -5184,20 +5162,16 @@ def read_hotw(filename):
       nu, coef
     Other lines are omitted.
     """
-    import sys
-    f = open(filename, 'r')
-    nu = []
-    coef = []
-    for line in f:
-        pars = line.split()
-        try:
-            nu.append(float(pars[0]))
-            coef.append(float(pars[1]))
-        except:
-            if False:
-                print(sys.exc_info())
-            else:
-                pass    
+    with open(filename, 'r') as f:
+        nu = []
+        coef = []
+        for line in f:
+            pars = line.split()
+            try:
+                nu.append(float(pars[0]))
+                coef.append(float(pars[1]))
+            except:
+                pass
     return array(nu), array(coef)
 
 # alias for read_hotw for backwards compatibility
