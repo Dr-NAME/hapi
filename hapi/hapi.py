@@ -2702,10 +2702,6 @@ def saveHeader(TableName):
     
 # ---------- DATABASE FRONTEND END -------------
 
-# simple implementation of getting a line list from a remote server
-def getLinelist(local_name, query, api_key):
-    return makeQuery(local_name)
-
 # -------------------------------------------------------------------
 # -------------------------------------------------------------------
 # / GLOBABL API FUNCTIONS
