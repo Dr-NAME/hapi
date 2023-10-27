@@ -853,9 +853,9 @@ def getRowObjectFromString(input_string, TableName):
     #print 'getRowObjectFromString:'
     pos = 0
     RowObject = []
+    regex = FORMAT_PYTHON_REGEX
     for par_name in LOCAL_TABLE_CACHE[TableName]['header']['order']:
         par_format = LOCAL_TABLE_CACHE[TableName]['header']['format'][par_name]
-        regex = FORMAT_PYTHON_REGEX
         (lng, trail, lngpnt, ty) = re.search(regex, par_format).groups()
         lng = int(lng)
         par_value = input_string[pos:(pos+lng)]
@@ -878,9 +878,9 @@ def getRowObjectFromString(input_string, TableName):
             pos = 1
         else:
             pos = 0
+        regex = FORMAT_PYTHON_REGEX
         for par_name in LOCAL_TABLE_CACHE[TableName]['header']['extra']:
             par_format = LOCAL_TABLE_CACHE[TableName]['header']['extra_format'][par_name]
-            regex = FORMAT_PYTHON_REGEX
             lng, trail, lngpnt, ty = re.search(regex, par_format).groups()
             lng = int(lng) 
             par_value = csv_chunks[pos]
@@ -1063,9 +1063,9 @@ def storage2cache(TableName, cast=True, ext='data', nlines=None, pos=None):
     # Additionally: convert numeric arrays in "extra" part of the LOCAL_TABLE_CACHE to masked arrays.
     # This is done to avoid "nan" values in the arithmetic operations involving these columns.
     if 'extra' in header and header['extra']:
+        regex = FORMAT_PYTHON_REGEX
         for par_name in LOCAL_TABLE_CACHE[TableName]['header']['extra']:
             par_format = LOCAL_TABLE_CACHE[TableName]['header']['extra_format'][par_name]
-            regex = FORMAT_PYTHON_REGEX
             if ty.lower() in ['d', 'e', 'f']:
             lng, trail, lngpnt, ty = re.search(regex, par_format).groups()
                 column = LOCAL_TABLE_CACHE[TableName]['data'][par_name]
@@ -2283,9 +2283,9 @@ def extractColumns(TableName, SourceParameterName, ParameterFormats, ParameterNa
     i=0
     format_regex = []
     format_types = []
+    regex = FORMAT_PYTHON_REGEX
     for par_format in ParameterFormats:
         par_name = ParameterNames[i]
-        regex = FORMAT_PYTHON_REGEX
         lng, trail, lngpnt, ty = re.search(regex, par_format).groups()
         ty = ty.lower()
         if ty == 'd':
