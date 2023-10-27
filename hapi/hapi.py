@@ -780,7 +780,7 @@ def formatString(par_format, par_value, lang='FORTRAN'):
     #        P - [dfs] int/float/string
     # PYTHON RULE: if N is absent, default value is 6
     regex = FORMAT_PYTHON_REGEX
-    (lng, trail, lngpnt, ty) = re.search(regex, par_format).groups()
+    lng, trail, lngpnt, ty = re.search(regex, par_format).groups()
     if type(par_value) is np.ma.core.MaskedConstant:
         result = '%%%ds' % lng % '#'
         return result
@@ -838,7 +838,7 @@ def putTableHeaderToString(TableName):
     regex = FORMAT_PYTHON_REGEX
     for par_name in LOCAL_TABLE_CACHE[TableName]['header']['order']:
         par_format = LOCAL_TABLE_CACHE[TableName]['header']['format'][par_name]
-        (lng, trail, lngpnt, ty) = re.search(regex, par_format).groups()
+        lng, trail, lngpnt, ty = re.search(regex, par_format).groups()
         fmt = '%%%ss' % lng
         try:
             par_name_short = PARAMETER_NICKNAMES[par_name]
@@ -881,7 +881,7 @@ def getRowObjectFromString(input_string, TableName):
         for par_name in LOCAL_TABLE_CACHE[TableName]['header']['extra']:
             par_format = LOCAL_TABLE_CACHE[TableName]['header']['extra_format'][par_name]
             regex = FORMAT_PYTHON_REGEX
-            (lng, trail, lngpnt, ty) = re.search(regex, par_format).groups()
+            lng, trail, lngpnt, ty = re.search(regex, par_format).groups()
             lng = int(lng) 
             par_value = csv_chunks[pos]
             if ty == 'd': # integer value
@@ -1066,8 +1066,8 @@ def storage2cache(TableName, cast=True, ext='data', nlines=None, pos=None):
         for par_name in LOCAL_TABLE_CACHE[TableName]['header']['extra']:
             par_format = LOCAL_TABLE_CACHE[TableName]['header']['extra_format'][par_name]
             regex = FORMAT_PYTHON_REGEX
-            (lng, trail, lngpnt, ty) = re.search(regex, par_format).groups()
             if ty.lower() in ['d', 'e', 'f']:
+            lng, trail, lngpnt, ty = re.search(regex, par_format).groups()
                 column = LOCAL_TABLE_CACHE[TableName]['data'][par_name]
                 colmask = np.isnan(column)
                 LOCAL_TABLE_CACHE[TableName]['data'][par_name] = np.ma.array(column, mask=colmask)
@@ -2286,7 +2286,7 @@ def extractColumns(TableName, SourceParameterName, ParameterFormats, ParameterNa
     for par_format in ParameterFormats:
         par_name = ParameterNames[i]
         regex = FORMAT_PYTHON_REGEX
-        (lng, trail, lngpnt, ty) = re.search(regex, par_format).groups()
+        lng, trail, lngpnt, ty = re.search(regex, par_format).groups()
         ty = ty.lower()
         if ty == 'd':
            par_type = int
