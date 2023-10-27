@@ -1066,8 +1066,8 @@ def storage2cache(TableName, cast=True, ext='data', nlines=None, pos=None):
         regex = FORMAT_PYTHON_REGEX
         for par_name in LOCAL_TABLE_CACHE[TableName]['header']['extra']:
             par_format = LOCAL_TABLE_CACHE[TableName]['header']['extra_format'][par_name]
-            if ty.lower() in ['d', 'e', 'f']:
             lng, trail, lngpnt, ty = re.search(regex, par_format).groups()
+            if ty.lower() in set(['d', 'e', 'f']):
                 column = LOCAL_TABLE_CACHE[TableName]['data'][par_name]
                 colmask = np.isnan(column)
                 LOCAL_TABLE_CACHE[TableName]['data'][par_name] = np.ma.array(column, mask=colmask)
