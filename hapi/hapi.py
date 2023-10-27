@@ -703,7 +703,7 @@ def getFullTableAndHeaderName(TableName, ext='data'):
         fullpath_data = os.path.join(VARIABLES['BACKEND_DATABASE_NAME'], fullpath_data)
     if not os.path.isfile(fullpath_data):
         fullpath_data = VARIABLES['BACKEND_DATABASE_NAME'] + '/' + TableName + '.par'
-        if not os.path.isfile(fullpath_data) and TableName!='sampletab':
+        if not os.path.isfile(fullpath_data) and TableName != 'sampletab':
             raise Exception('Lonely header \"%s\"' % fullpath_data)
     fullpath_header = TableName + '.header'
     if not flag_abspath:
@@ -775,10 +775,10 @@ def formatString(par_format, par_value, lang='FORTRAN'):
     #  %M.NP
     #        M - total field length (optional)
     #             (minus sign included in M)
-    #        . - decimal ceparator (optional)
+    #        . - decimal separator (optional)
     #        N - number of digits after . (optional)
     #        P - [dfs] int/float/string
-    # PYTHON RULE: if N is abcent, default value is 6
+    # PYTHON RULE: if N is absent, default value is 6
     regex = FORMAT_PYTHON_REGEX
     (lng, trail, lngpnt, ty) = re.search(regex, par_format).groups()
     if type(par_value) is np.ma.core.MaskedConstant:
@@ -872,8 +872,7 @@ def getRowObjectFromString(input_string, TableName):
         pos += lng
     # Do the same but now for extra (comma-separated) parameters
     if 'extra' in set(LOCAL_TABLE_CACHE[TableName]['header']):
-        csv_chunks = input_string.split(LOCAL_TABLE_CACHE[TableName]['header'].\
-                                        get('extra_separator', ', '))
+        csv_chunks = input_string.split(LOCAL_TABLE_CACHE[TableName]['header'].get('extra_separator', ', '))
         # Disregard the first "column-fixed" container if it presents:
         if LOCAL_TABLE_CACHE[TableName]['header'].get('order', []):
             pos = 1
