@@ -842,7 +842,7 @@ def putTableHeaderToString(TableName):
         fmt = '%%%ss' % lng
         try:
             par_name_short = PARAMETER_NICKNAMES[par_name]
-        except:
+        except KeyError:
             par_name_short = par_name
         #output_string += fmt % par_name
         output_string += (fmt % par_name_short)[:int(lng)]
@@ -909,7 +909,7 @@ def getRowObjectFromString(input_string, TableName):
 def cache2storage(TableName):
     try:
        os.mkdir(VARIABLES['BACKEND_DATABASE_NAME'])
-    except:
+    except FileExistsError:
        pass
 
     fullpath_data = VARIABLES['BACKEND_DATABASE_NAME'] + '/' + TableName + '.data' # bugfix
@@ -938,9 +938,7 @@ def storage2cache(TableName, cast=True, ext='data', nlines=None, pos=None):
     with open(fullpath_header, 'r') as InfileHeader:
         try:
             Header = json.load(InfileHeader)
-        except:
-            print('HEADER:')
-            print(header_text)
+        except json.JSONDecodeError:
             raise Exception('Invalid header')
     LOCAL_TABLE_CACHE[TableName] = {}
     LOCAL_TABLE_CACHE[TableName]['header'] = Header
